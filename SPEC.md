@@ -1,0 +1,195 @@
+# SPEC.md — C++ 在线判题系统(仿 LeetCode OJ)
+
+> 版本:v1.0  |  状态:需求已冻结
+> 后端:cpp-httplib(C++17)  |  前端:原生 HTML/CSS/JS  |  数据库:MySQL
+
+---
+
+## 1. 需求概述
+
+面向**外部用户公开使用**的在线判题(Online Judge)系统。用户登录后查看题目、在线编写 C++ 代码、提交评测并查看结果;管理员可在后台新增/删除题目。
+
+### 核心功能
+- 在线代码编辑、编译、运行、返回判题结果
+- 题目列表 / 题目详情(描述 + 测试用例 + 运行限额)
+- 管理后台(新增/删除题目,含测试用例管理)
+- 角色:普通用户(查看+做题)、管理员(增删题)
+
+---
+
+## 2. 架构设计
+
+### 2.1 总体架构
+
+```
+                     ┌─────────────────────────────────────────┐
+   Browser (原生      │                OJ 单体 Server (C++)        │
+   HTML/CSS/JS)      │  ┌──────────────┐   ┌─────────────────┐   │
+     │  HTTP/JSON     │  │  cpp-httplib │   │  JudgeService   │   │
+     │  (fetch)       │  │  API 路由层   │   │  串行评测队列     │   │
+     ▼                │  │  静态资源     │   │  fork+setrlimit │   │
+   ┌───────┐          │  │  鉴权(Session)│   │  沙箱(B档)      │   │
+   │ 页面   │          │  └──────┬───────┘   └────────┬────────┘   │
+   │ 列表   │◄─────────│         │                    │            │
+   │ 详情+  │          │         ▼                    ▼            │
+   │ 编辑器 │          │  ┌────────────┐      ┌────────────────┐  │
+   │ 后台   │          │  │   MySQL     │      │  文件系统       │  │
+   └───────┘          │  │  题目/账号/  │      │ /data/problems │  │
+                      │  │  会话        │      │ /{id}/case_N   │  │
+                      │  └────────────┘      └────────────────┘  │
+                      └─────────────────────────────────────────┘
+```
+
+### 2.2 关键设计决策
+- **评测模型**:程序读 stdin、写 stdout,与期望输出**逐字节对比**;支持**特判器**(special judge);**不支持**交互式(一期,标记为未来扩展)。
+- **沙箱(B 档)**:以低权限用户运行 + `fork()` + `setrlimit(RLIMIT_CPU/AS)`。⚠️ 隔离较弱,**公开部署已知风险**,归档升级到 A 档(`unshare` namespace + `seccomp` + `cgroup`)的路径见 §7。
+- **评测队列**:串行评测队列(单 worker,安全可靠)。
+- **运行限额**:限 CPU 时间 + 内存;**全局默认 CPU 500ms**,**管理员建题/改题时可针对单题覆盖**。
+- **判题结果类型**(7 类):`Accepted / Wrong Answer(含预期vs实际对比) / Time Limit Exceeded / Memory Limit Exceeded / Runtime Error / Compile Error / System Error`。超时/超内存/RTE 直接终止并返回对应结果。
+- **判定响应**:异步 —— 提交返回 `submission_id`,前端轮询结果。
+- **鉴权**:Session(服务端存储登录态,Cookie 携带),管理员登录入口与普通用户**分开**,管理员账号由**配置文件**指定。
+
+---
+
+## 3. 数据模型(MySQL)
+
+> 提交记录与用户代码**一期不持久化**(仅内存/临时,便于异步返回)。
+
+### users
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | INT PK AUTO | 用户ID |
+| username | VARCHAR(64) UNIQUE | 用户名 |
+| password_hash | VARCHAR(128) | 密码哈希(建议 bcrypt/argon2) |
+| role | ENUM('user','admin') | 角色 |
+
+> 注册仅允许创建 `role='user'` 的账号;管理员账号只能由配置文件指定,不开放注册。
+
+### problems
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | INT PK AUTO | 题目ID |
+| title | VARCHAR(128) | 标题 |
+| description | TEXT | Markdown 描述 |
+| difficulty | ENUM('easy','medium','hard') | 难度 |
+| tags | VARCHAR(255) | 标签(逗号分隔) |
+| time_limit_ms | INT | CPU 限额(毫秒,默认 500,可覆盖) |
+| memory_limit_mb | INT | 内存限额(MB) |
+| judge_type | ENUM('exact','special') | 'exact'逐字节 / 'special'特判 |
+| created_at / updated_at | DATETIME | 时间戳 |
+
+### sessions(服务端 Session)
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | VARCHAR(64) PK | session_id |
+| user_id | INT FK | 关联用户 |
+| created_at / expires_at | DATETIME | 创建/过期时间 |
+
+---
+
+## 4. 测试用例存储(文件系统)
+
+- 根目录:`/data/problems/{problem_id}/`
+  - `case_1.in` / `case_1.out`
+  - `case_2.in` / `case_2.out`
+  - ...
+  - `spj.cpp`(仅特判题;编译为 `spj`,运行接收「输入 + 用户输出 + 标准答案」,返回 0/非0)
+- 每个评测任务使用**独立临时目录**,结束时清理。
+
+---
+
+## 5. 后端 API 边界
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| POST | /api/auth/register | 公开 | 普通用户注册(用户名 + 密码,默认 role=user) |
+| POST | /api/auth/login | 公开 | 普通用户登录(建立 Session) |
+| POST | /api/auth/admin/login | 公开 | 管理员登录(入口分离) |
+| POST | /api/auth/logout | 登录 | 登出 |
+| GET | /api/problems | 登录 | 题目列表 |
+| GET | /api/problems/{id} | 登录 | 题目详情 |
+| POST | /api/problems | 管理员 | 新增题目 |
+| DELETE | /api/problems/{id} | 管理员 | 删除题目 |
+| PUT | /api/problems/{id} | 管理员 | 修改题目/限额 |
+| POST | /api/submissions | 登录 | 提交代码 → 返回 submission_id |
+| GET | /api/submissions/{id} | 登录 | 轮询判题结果(含 WA 对比详情) |
+| GET | /api/submissions | 登录 | 我的提交记录(内存态) |
+
+> 静态资源:前端 HTML/CSS/JS 由 cpp-httplib 直接托管。
+
+---
+
+## 6. 页面(前端,原生三件套)
+
+1. 注册页(用户名 + 密码,校验重名/格式,成功后跳转登录页)
+2. 登录页(普通用户 / 管理员分开入口)
+3. 题目列表页(含难度/标签过滤)
+4. 题目详情 + 代码编辑器 + 提交页(展示结果、WA 预期vs实际)
+5. 提交记录页
+6. 管理后台(新增/删除/编辑题目,管理测试用例与限额)
+
+---
+
+## 7. 安全、性能与已知风险
+
+- **已接受风险**:B 档沙箱存在同机越权/逃逸风险。**发布前必须**:以专用低权限用户运行评测进程、内核启用非 root 降权、`ptrace`/`seccomp` 视版本补充。
+- **升级路径(A 档)**:`unshare(CLONE_NEWPID/NEWNS/NEWNET/NEWIPC)` + `seccomp-bpf` 白名单过滤系统调用 + `cgroup v2` 限制 CPU/内存 + 网络禁用。
+- 用户代码**禁止网络访问**(无此需要则直接不授权网络 namespace)。
+- Session 口令用安全随机数生成;密码不得明文存储(注册时同样加盐哈希)。
+- 输入长度、提交内容大小限制,防 DoS;注册接口需限流/防滥用(如同一 IP 频繁注册)。
+- 性能:10 人并发、单 worker 串行评测,单机余量充分。
+
+---
+
+## 8. 种子数据
+
+- 内置 **5 道题**(by 你,手工预置题目 + 测试用例文件),难度分布建议 2 easy / 2 medium / 1 hard。
+- 管理员账号由 `/etc/oj/admin.conf`(或 `config` 文件)指定。
+
+---
+
+## 9. TODO 清单(分阶段)
+
+### Phase 1 — 骨架与鉴权
+- [ ] cpp-httplib 服务骨架 + 静态资源托管
+- [ ] MySQL 连接层(可选用 mysql-connector-c++ 或直接封装 mysql C API)
+- [ ] 用户/会话表 + Session 鉴权中间件
+- [ ] 注册 API + 注册页(重名/格式校验,默认 role=user)
+- [ ] 登录/登出 API + 登录页(普通用户/管理员分离)
+
+### Phase 2 — 题目管理
+- [ ] problems 表 + 测试用例文件规范(`/data/problems/{id}/`)
+- [ ] 题目 CRUD API + 管理员后台页面
+- [ ] 导入算法:解压上传.zip → 写文件系统 + 入库
+- [ ] 5 道种子题
+
+### Phase 3 — 评测核心
+- [ ] 编译(g++ -O2 -std=c++17 等)到独立临时目录
+- [ ] fork + setrlimit 沙箱运行(CPU/内存限额、超时 kill)
+- [ ] 串行评测队列 + 异步 submission 模型
+- [ ] 逐字节对比 + 特判器(spj)支持
+- [ ] 结果分类(7 类)+ WA 预期vs实际详情
+
+### Phase 4 — 前端完整
+- [ ] 题目列表 + 详情 + 编辑器(自带简单高亮)
+- [ ] 提交 + 轮询结果 UI
+- [ ] 提交记录页
+- [ ] 后台题目管理 UI
+
+### Phase 5 — 加固与收尾
+- [ ] 安全加固(见 §7)
+- [ ] 并发/异常/边界用例测试
+- [ ] README + 部署脚本
+
+---
+
+## 10. 验收标准
+
+1. 普通用户可自助注册(重名/格式校验),注册后可用账号密码登录。
+2. 管理员可新增/删除/编辑题目(含上传测试用例、设置单题限额)。
+3. 普通用户可浏览题目、提交 C++ 代码、得到 7 类判题结果之一;WA 时展示「预期输出 vs 实际输出」。
+4. 超时/超内存/运行时错误直接终止并返回对应结果。
+5. 未登录不能进入功能页或调用受限 API;管理员入口与普通用户隔离。
+6. 提交为**异步**返回 submission_id,前端可轮询到最终结果。
+7. 种子 5 题可完整走通「列表→详情→提交→判题→结果」闭环。
+8. 任意用户代码无法读写系统关键文件、无法访问网络、无法波及服务器进程。
