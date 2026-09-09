@@ -204,3 +204,53 @@
 6. 提交为**异步**返回 submission_id,前端可轮询到最终结果。
 7. 种子 5 题可完整走通「列表→详情→提交→判题→结果」闭环。
 8. 任意用户代码无法读写系统关键文件、无法访问网络、无法波及服务器进程。
+
+---
+
+## 11. 项目目录结构(规划)
+
+```
+cpp-OJ-vibe_coding/
+├── SPEC.md                        # 需求规格文档
+├── CMakeLists.txt                 # 构建配置(C++17)
+├── config/
+│   └── admin.conf                 # 管理员账号配置(用户名/口令,不开放注册)
+├── src/                           # C++ 后端源码
+│   ├── main.cpp                   # 入口:cpp-httplib 服务 + 路由注册 + 静态资源托管
+│   ├── routes/                    # API 路由层
+│   │   ├── auth_routes.cpp/.h     # 注册 / 登录(普通/管理员) / 登出
+│   │   ├── problem_routes.cpp/.h  # 题目 CRUD(管理员)+ 列表/详情(登录)
+│   │   └── submission_routes.cpp/.h # 提交 / 轮询结果 / 我的提交记录
+│   ├── db/
+│   │   ├── db_conn.cpp/.h         # MySQL 连接层(mysql C API 封装)
+│   │   └── schema.sql             # 建表脚本(users / problems / test_cases / sessions)
+│   ├── auth/
+│   │   ├── session.cpp/.h         # Session 创建/校验/过期(服务端存储)
+│   │   └── password.cpp/.h        # 密码加盐哈希
+│   ├── judge/                     # 评测核心
+│   │   ├── judge_service.cpp/.h   # 串行评测队列 + 异步 submission 模型
+│   │   ├── sandbox.cpp/.h         # fork + setrlimit(CPU/内存限额、超时 kill)
+│   │   └── comparator.cpp/.h      # 逐字节对比 + 特判器(spj)编译与运行
+│   └── util/                      # 通用工具(随机数、JSON 解析等)
+├── static/                        # 前端静态资源(由 cpp-httplib 直接托管)
+│   ├── index.html                 # 入口页(按登录态跳转)
+│   ├── login.html                 # 登录页(普通用户/管理员分开入口)
+│   ├── register.html              # 注册页
+│   ├── problems.html              # 题目列表页
+│   ├── problem.html               # 题目详情 + 代码编辑器 + 提交
+│   ├── submissions.html           # 提交记录页
+│   ├── admin.html                 # 管理后台(增删改题 + 测试用例管理)
+│   ├── css/
+│   │   └── style.css              # 全局样式
+│   └── js/
+│       ├── api.js                 # fetch 封装(携带 Cookie)
+│       ├── auth.js                # 登录态检查 / 登出
+│       └── editor.js              # 简单代码高亮
+├── scripts/
+│   ├── init_db.sh                 # 初始化数据库(执行 schema.sql)
+│   └── seed.sql                   # 5 道种子题(problems + test_cases 表数据)
+└── third_party/
+    └── httplib.h                  # cpp-httplib 单头文件
+```
+
+> 说明:测试用例已改为**表存储**(§3/§4),无 `/data/problems` 文件目录;文件系统仅用于评测时的独立临时目录,由 JudgeService 创建并清理。
