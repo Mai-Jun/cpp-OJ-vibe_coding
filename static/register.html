@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注册 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Online Judge</h1>
+    <div class="auth-card">
+      <form id="registerForm">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" autocomplete="new-password" required>
+
+        <label for="confirm">确认密码</label>
+        <input type="password" id="confirm" name="confirm" autocomplete="new-password" required>
+
+        <button type="submit" id="submitBtn">注册</button>
+      </form>
+
+      <div class="alert" id="alert"></div>
+
+      <p class="meta">已有账号？<a href="/login.html">直接登录</a></p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    const form = document.getElementById("registerForm");
+    const alertEl = document.getElementById("alert");
+    const btn = document.getElementById("submitBtn");
+
+    function show(msg, cls) {
+      alertEl.className = "alert " + (cls || "");
+      alertEl.textContent = msg || "";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const confirm = document.getElementById("confirm").value;
+
+      show();
+      if (password !== confirm) {
+        show("两次输入的密码不一致", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "注册中...";
+      try {
+        // 注册仅允许普通用户，默认 role=user
+        const data = await apiFetch("/api/auth/register", { method: "POST", body: { username, password } });
+        if (!data.ok) throw new Error(data.error || "注册失败");
+        show("注册成功，正在跳转到登录页...", "success");
+        setTimeout(() => { location.href = "/login.html"; }, 800);
+      } catch (err) {
+        show(err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "注册";
+      }
+    });
+  </script>
+</body>
+</html>

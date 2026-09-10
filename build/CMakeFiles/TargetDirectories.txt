@@ -1,0 +1,3 @@
+/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles/oj_server.dir
+/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles/edit_cache.dir
+/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles/rebuild_cache.dir

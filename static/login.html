@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Online Judge</h1>
+    <div class="auth-card">
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-mode="user">普通用户</div>
+        <div class="tab" data-mode="admin">管理员</div>
+      </div>
+
+      <form id="loginForm">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+        <button type="submit" id="submitBtn">登录</button>
+      </form>
+
+      <div class="alert" id="alert"></div>
+
+      <p class="meta">还没有账号？<a href="/register.html">立即注册</a></p>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    let loginMode = "user"; // user | admin
+
+    // 普通管理员切换
+    document.getElementById("tabs").addEventListener("click", (e) => {
+      const tab = e.target.closest(".tab");
+      if (!tab) return;
+      loginMode = tab.dataset.mode;
+      document.querySelectorAll("#tabs .tab").forEach((t) => t.classList.toggle("active", t === tab));
+    });
+
+    const form = document.getElementById("loginForm");
+    const alertEl = document.getElementById("alert");
+    const btn = document.getElementById("submitBtn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      alertEl.className = "alert";
+      btn.disabled = true;
+      btn.textContent = "登录中...";
+
+      const path = loginMode === "admin" ? "/api/auth/admin/login" : "/api/auth/login";
+      try {
+        const data = await apiFetch(path, { method: "POST", body: { username, password } });
+        if (!data.ok) throw new Error(data.error || "登录失败");
+        setSession({ username: data.username, role: data.role });
+        location.href = "/";
+      } catch (err) {
+        alertEl.className = "alert error";
+        alertEl.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "登录";
+      }
+    });
+  </script>
+</body>
+</html>

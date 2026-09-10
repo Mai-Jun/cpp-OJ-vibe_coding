@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="wide">
+  <div class="nav">
+    <span class="brand">OJ 管理后台</span>
+    <div class="end">
+      <button id="logoutBtn" class="btn-sm">登出</button>
+    </div>
+  </div>
+
+  <div class="container wide">
+    <div class="alert" id="alert"></div>
+
+    <!-- 题目列表 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+        <h2 style="margin:0;">题目列表</h2>
+        <button id="newBtn" class="btn-sm">+ 新建题目</button>
+      </div>
+      <ul class="problem-list" id="problemList"></ul>
+    </div>
+
+    <!-- 编辑区 -->
+    <div class="card" id="editCard" style="display:none;">
+      <h2 id="editTitle" style="margin-top:0;">编辑题目</h2>
+      <form id="editForm">
+        <input type="hidden" id="fId">
+        <label>标题</label>
+        <input type="text" id="fTitle" required maxlength="128">
+
+        <label>描述（Markdown）</label>
+        <textarea id="fDescription" rows="10" required></textarea>
+
+        <div class="form-grid">
+          <div>
+            <label>难度</label>
+            <select id="fDifficulty">
+              <option value="easy">easy</option>
+              <option value="medium">medium</option>
+              <option value="hard">hard</option>
+            </select>
+          </div>
+          <div>
+            <label>标签（逗号分隔）</label>
+            <input type="text" id="fTags" placeholder="数组,哈希表">
+          </div>
+          <div>
+            <label>CPU 限额 (ms)</label>
+            <input type="number" id="fTimeLimit" value="500" min="1">
+          </div>
+          <div>
+            <label>内存限额 (MB)</label>
+            <input type="number" id="fMemoryLimit" value="256" min="1">
+          </div>
+          <div>
+            <label>判题方式</label>
+            <select id="fJudgeType">
+              <option value="exact">逐字节 exact</option>
+              <option value="special">特判 special</option>
+            </select>
+          </div>
+        </div>
+
+        <label>特判器源码（special 时必填，编译为 spj 可执行文件）</label>
+        <textarea id="fSpj" rows="6" placeholder="// 接收：输入 + 用户输出 + 标准答案；返回 0/非0"></textarea>
+
+        <label style="margin-top:1rem;">测试用例</label>
+        <ul class="case-list" id="caseList"></ul>
+        <button type="button" id="addCaseBtn" class="btn-sm btn-secondary">+ 添加用例</button>
+
+        <div class="actions" style="margin-top:1rem;align-items:center;">
+          <button type="submit" id="saveBtn">保存</button>
+          <button type="button" id="cancelBtn" class="btn-secondary">取消</button>
+        </div>
+      </form>
+
+      <!-- zip 导入 -->
+      <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <h3 style="margin:.2rem 0 .6rem;">ZIP 批量导入测试用例（整体替换）</h3>
+        <p style="color:var(--muted);font-size:.85rem;margin:0 0 .5rem;">
+          格式：case_1.in / case_1.out 配对，或 inputs/ 与 outputs/ 两个目录。仅支持 store/deflate，禁止路径穿越。
+        </p>
+        <input type="file" id="zipFile" accept=".zip">
+        <button type="button" id="importZipBtn" class="btn-sm btn-secondary" style="margin:.5rem 0 0;">导入 ZIP</button>
+        <span id="importMsg" style="margin-left:.5rem;font-size:.85rem;"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    const alertEl = document.getElementById("alert");
+    const listEl = document.getElementById("problemList");
+    const editCard = document.getElementById("editCard");
+    const editForm = document.getElementById("editForm");
+    const caseListEl = document.getElementById("caseList");
+
+    function showAlert(msg, cls) {
+      alertEl.className = "alert " + (cls || "");
+      alertEl.textContent = msg || "";
+    }
+    function clearAlert() { showAlert(); }
+
+    // ---- 登录态守卫：仅管理员可进入 ----
+    (function guard() {
+      const s = getSession();
+      if (!s || s.role !== "admin") {
+        location.href = "/login.html";
+      }
+    })();
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      try { await apiFetch("/api/auth/logout", { method: "POST", body: {} }); } catch (e) {}
+      clearSession();
+      location.href = "/login.html";
+    });
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    const DIFF_CLASS = { easy: "badge easy", medium: "badge medium", hard: "badge hard" };
+
+    // ---- 加载题目列表 ----
+    async function loadProblems() {
+      clearAlert();
+      const data = await apiFetch("/api/problems");
+      const problems = data.problems || [];
+      listEl.innerHTML = problems.length ? "" : "<li>暂无题目</li>";
+      for (const p of problems) {
+        const li = document.createElement("li");
+        const tags = (p.tags || "").split(",").filter(t => t.trim()).map(t => `<span class="badge tag">${esc(t)}</span>`).join("");
+        li.innerHTML = `
+          <div>
+            <strong>#${p.id} ${esc(p.title)}</strong>
+            <div class="meta">
+              <span class="${DIFF_CLASS[p.difficulty] || 'badge'}">${esc(p.difficulty)}</span>
+              ${tags}
+              <span>${p.time_limit_ms}ms / ${p.memory_limit_mb}MB</span>
+              <span>· ${p.judge_type === "special" ? "特判" : "逐字节"}</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn-sm btn-secondary" data-edit="${p.id}">编辑</button>
+            <button class="btn-sm btn-danger" data-del="${p.id}">删除</button>
+          </div>`;
+        listEl.appendChild(li);
+      }
+      listEl.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openEdit(+b.dataset.edit)));
+      listEl.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => delProblem(+b.dataset.del)));
+    }
+
+    // ---- 打开新建 ----
+    document.getElementById("newBtn").addEventListener("click", () => {
+      editForm.reset();
+      document.getElementById("fId").value = "";
+      document.getElementById("fTimeLimit").value = 500;
+      document.getElementById("fMemoryLimit").value = 256;
+      document.getElementById("editTitle").textContent = "新建题目";
+      caseListEl.innerHTML = "";
+      editCard.style.display = "";
+      editCard.scrollIntoView({ behavior: "smooth" });
+    });
+
+    // ---- 打开编辑 ----
+    async function openEdit(id) {
+      clearAlert();
+      const data = await apiFetch(`/api/problems/${id}`);
+      const p = data.problem;
+      document.getElementById("fId").value = p.id;
+      document.getElementById("fTitle").value = p.title;
+      document.getElementById("fDescription").value = p.description;
+      document.getElementById("fDifficulty").value = p.difficulty;
+      document.getElementById("fTags").value = p.tags || "";
+      document.getElementById("fTimeLimit").value = p.time_limit_ms;
+      document.getElementById("fMemoryLimit").value = p.memory_limit_mb;
+      document.getElementById("fJudgeType").value = p.judge_type;
+      document.getElementById("fSpj").value = p.spj_source || "";
+      document.getElementById("editTitle").textContent = `编辑题目 #${p.id}`;
+      renderCases(p.test_cases || []);
+      editCard.style.display = "";
+      editCard.scrollIntoView({ behavior: "smooth" });
+    }
+
+    document.getElementById("cancelBtn").addEventListener("click", () => {
+      editCard.style.display = "none";
+    });
+
+    // ---- 用例编辑渲染 ----
+    function caseInputsEl() {
+      return [...caseListEl.querySelectorAll("li")].map(li => ({
+        input: li.querySelector(".c-in").value,
+        expected_output: li.querySelector(".c-out").value,
+      }));
+    }
+
+    function renderCases(cases) {
+      caseListEl.innerHTML = "";
+      const list = (cases.length ? cases : [{}]);
+      list.forEach((c, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div class="row">
+            <strong>用例 #${i + 1}</strong>
+            <button type="button" class="btn-sm btn-danger" data-rm>移除</button>
+          </div>
+          <label style="margin:.4rem 0 .2rem;">输入</label>
+          <textarea class="c-in" rows="2">${esc(c.input || "")}</textarea>
+          <label style="margin:.4rem 0 .2rem;">期望输出</label>
+          <textarea class="c-out" rows="2">${esc(c.expected_output || "")}</textarea>`;
+        li.querySelector("[data-rm]").addEventListener("click", () => li.remove());
+        caseListEl.appendChild(li);
+      });
+    }
+
+    document.getElementById("addCaseBtn").addEventListener("click", () => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div class="row"><strong>用例</strong><button type="button" class="btn-sm btn-danger" data-rm>移除</button></div>
+        <label style="margin:.4rem 0 .2rem;">输入</label><textarea class="c-in" rows="2"></textarea>
+        <label style="margin:.4rem 0 .2rem;">期望输出</label><textarea class="c-out" rows="2"></textarea>`;
+      li.querySelector("[data-rm]").addEventListener("click", () => li.remove());
+      caseListEl.appendChild(li);
+    });
+
+    // ---- 保存（新建/更新）----
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("fId").value;
+      const test_cases = caseInputsEl().filter(c => c.input !== "");
+      const body = {
+        title: document.getElementById("fTitle").value.trim(),
+        description: document.getElementById("fDescription").value,
+        difficulty: document.getElementById("fDifficulty").value,
+        tags: document.getElementById("fTags").value.trim(),
+        time_limit_ms: Number(document.getElementById("fTimeLimit").value) || 500,
+        memory_limit_mb: Number(document.getElementById("fMemoryLimit").value) || 256,
+        judge_type: document.getElementById("fJudgeType").value,
+        spj_source: document.getElementById("fSpj").value,
+        test_cases,
+      };
+      const btn = document.getElementById("saveBtn");
+      btn.disabled = true;
+      btn.textContent = "保存中...";
+      try {
+        if (id) {
+          await apiFetch(`/api/problems/${id}`, { method: "PUT", body });
+        } else {
+          await apiFetch("/api/problems", { method: "POST", body });
+        }
+        showAlert("保存成功", "success");
+        editCard.style.display = "none";
+        await loadProblems();
+      } catch (err) {
+        showAlert(err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "保存";
+      }
+    });
+
+    // ---- 删除题目 ----
+    async function delProblem(id) {
+      if (!confirm(`确定删除题目 #${id}？其测试用例将一并删除。`)) return;
+      try {
+        await apiFetch(`/api/problems/${id}`, { method: "DELETE" });
+        showAlert("已删除", "success");
+        await loadProblems();
+      } catch (err) {
+        showAlert(err.message, "error");
+      }
+    }
+
+    // ---- ZIP 导入 ----
+    document.getElementById("importZipBtn").addEventListener("click", async () => {
+      const id = document.getElementById("fId").value;
+      const fileInput = document.getElementById("zipFile");
+      const msg = document.getElementById("importMsg");
+      msg.textContent = "";
+      if (!id) { msg.textContent = "请先保存题目再导入用例"; return; }
+      if (!fileInput.files.length) { msg.textContent = "请选择 .zip 文件"; return; }
+      const fd = new FormData();
+      fd.append("file", fileInput.files[0]);
+      const btn = document.getElementById("importZipBtn");
+      btn.disabled = true;
+      btn.textContent = "导入中...";
+      try {
+        const res = await fetch(`/api/problems/${id}/import`, { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        msg.textContent = `成功导入 ${data.count} 个用例`;
+        showAlert("ZIP 导入成功", "success");
+        await openEdit(+id);
+      } catch (err) {
+        msg.textContent = "";
+        showAlert(err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "导入 ZIP";
+        fileInput.value = "";
+      }
+    });
+
+    loadProblems().catch(err => showAlert(err.message, "error"));
+  </script>
+</body>
+</html>
