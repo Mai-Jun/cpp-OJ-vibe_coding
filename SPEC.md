@@ -158,6 +158,8 @@
 ## 7. 安全、性能与已知风险
 
 - **已接受风险**:B 档沙箱存在同机越权/逃逸风险。**发布前必须**:以专用低权限用户运行评测进程、内核启用非 root 降权、`ptrace`/`seccomp` 视版本补充。
+  - 实现注意:评测子进程通过 `setrlimit(RLIMIT_CPU, soft < hard)` 使 CPU 超限触发 `SIGXCPU`(soft==hard 时内核直接 SIGKILL,无法区分 CPU 超时);`RLIMIT_AS` 超限表现为 `bad_alloc`/`SIGSEGV`,据此归类 MLE。
+  - **降权依赖 root**:`setuid` 切换低权限用户(`oj-runner`)要求服务端以 root 启动;非 root 环境自动降级为当前用户运行(仅打印一次提示),此时隔离减弱,部署时务必 root。
 - **升级路径(A 档)**:`unshare(CLONE_NEWPID/NEWNS/NEWNET/NEWIPC)` + `seccomp-bpf` 白名单过滤系统调用 + `cgroup v2` 限制 CPU/内存 + 网络禁用。
 - 用户代码**禁止网络访问**(无此需要则直接不授权网络 namespace)。
 - Session 口令用安全随机数生成;密码不得明文存储(注册时同样加盐哈希)。
@@ -189,11 +191,11 @@
 - [X] 5 道种子题
 
 ### Phase 3 — 评测核心
-- [ ] 编译(g++ -O2 -std=c++17 等)到独立临时目录
-- [ ] fork + setrlimit 沙箱运行(CPU/内存限额、超时 kill)
-- [ ] 串行评测队列 + 异步 submission 模型
-- [ ] 逐字节对比 + 特判器(spj)支持
-- [ ] 结果分类(7 类)+ WA 预期vs实际详情
+- [X] 编译(g++ -O2 -std=c++17 等)到独立临时目录
+- [X] fork + setrlimit 沙箱运行(CPU/内存限额、超时 kill)
+- [X] 串行评测队列 + 异步 submission 模型
+- [X] 逐字节对比 + 特判器(spj)支持
+- [X] 结果分类(7 类)+ WA 预期vs实际详情
 
 ### Phase 4 — 前端完整
 - [ ] 题目列表 + 详情 + 编辑器(自带简单高亮)

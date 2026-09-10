@@ -11,9 +11,14 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/mai/cpp-OJ-vibe_coding/src/auth/password.cpp" "CMakeFiles/oj_server.dir/src/auth/password.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/auth/password.cpp.o.d"
   "/home/mai/cpp-OJ-vibe_coding/src/auth/session.cpp" "CMakeFiles/oj_server.dir/src/auth/session.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/auth/session.cpp.o.d"
   "/home/mai/cpp-OJ-vibe_coding/src/db/db_conn.cpp" "CMakeFiles/oj_server.dir/src/db/db_conn.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/db/db_conn.cpp.o.d"
+  "/home/mai/cpp-OJ-vibe_coding/src/judge/comparator.cpp" "CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o.d"
+  "/home/mai/cpp-OJ-vibe_coding/src/judge/judge_service.cpp" "CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o.d"
+  "/home/mai/cpp-OJ-vibe_coding/src/judge/pwd_util.cpp" "CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o.d"
+  "/home/mai/cpp-OJ-vibe_coding/src/judge/sandbox.cpp" "CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o.d"
   "/home/mai/cpp-OJ-vibe_coding/src/main.cpp" "CMakeFiles/oj_server.dir/src/main.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/main.cpp.o.d"
   "/home/mai/cpp-OJ-vibe_coding/src/routes/auth_routes.cpp" "CMakeFiles/oj_server.dir/src/routes/auth_routes.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/routes/auth_routes.cpp.o.d"
   "/home/mai/cpp-OJ-vibe_coding/src/routes/problem_routes.cpp" "CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.o.d"
+  "/home/mai/cpp-OJ-vibe_coding/src/routes/submission_routes.cpp" "CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o" "gcc" "CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o.d"
   )
 
 # Targets to which this target links.

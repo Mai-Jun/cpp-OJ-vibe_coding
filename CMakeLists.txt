@@ -14,6 +14,11 @@ add_executable(oj_server
   src/auth/session.cpp
   src/routes/auth_routes.cpp
   src/routes/problem_routes.cpp
+  src/routes/submission_routes.cpp
+  src/judge/sandbox.cpp
+  src/judge/comparator.cpp
+  src/judge/judge_service.cpp
+  src/judge/pwd_util.cpp
 )
 
 target_include_directories(oj_server PRIVATE
@@ -23,6 +28,7 @@ target_include_directories(oj_server PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/db
   ${CMAKE_CURRENT_SOURCE_DIR}/src/auth
   ${CMAKE_CURRENT_SOURCE_DIR}/src/routes
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/judge
 )
 target_compile_features(oj_server PRIVATE cxx_std_17)
 

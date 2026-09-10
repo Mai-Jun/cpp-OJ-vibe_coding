@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/mai/cpp-OJ-vibe_coding/third_party -I/home/mai/cpp-OJ-vibe_coding/src -I/home/mai/cpp-OJ-vibe_coding/src/util -I/home/mai/cpp-OJ-vibe_coding/src/db -I/home/mai/cpp-OJ-vibe_coding/src/auth -I/home/mai/cpp-OJ-vibe_coding/src/routes -I/usr/include/mysql
+CXX_INCLUDES = -I/home/mai/cpp-OJ-vibe_coding/third_party -I/home/mai/cpp-OJ-vibe_coding/src -I/home/mai/cpp-OJ-vibe_coding/src/util -I/home/mai/cpp-OJ-vibe_coding/src/db -I/home/mai/cpp-OJ-vibe_coding/src/auth -I/home/mai/cpp-OJ-vibe_coding/src/routes -I/home/mai/cpp-OJ-vibe_coding/src/judge -I/usr/include/mysql
 
 CXX_FLAGS = -O3 -DNDEBUG -Wall -Wextra
 

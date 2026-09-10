@@ -9,7 +9,9 @@
 #include "auth_routes.h"
 #include "db_conn.h"
 #include "httplib.h"
+#include "judge_service.h"
 #include "problem_routes.h"
+#include "submission_routes.h"
 
 #include <sys/stat.h>
 
@@ -76,6 +78,10 @@ int main(int argc, char **argv) {
 
   oj::RegisterAuthRoutes(svr, &db, admin_conf);
   oj::RegisterProblemRoutes(svr, &db);
+
+  // 评测服务：后台单 worker 串行评测（其内部使用独立 DB 连接）。
+  oj::judge::JudgeService judge(&db);
+  oj::RegisterSubmissionRoutes(svr, &db, &judge);
 
   // 健康检查
   svr.Get("/health", [](const httplib::Request &, httplib::Response &res) {

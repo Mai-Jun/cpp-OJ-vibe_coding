@@ -201,6 +201,102 @@ src/db/db_conn.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/db/db_conn.cpp.s
 .PHONY : src/db/db_conn.cpp.s
 
+src/judge/comparator.o: src/judge/comparator.cpp.o
+.PHONY : src/judge/comparator.o
+
+# target to build an object file
+src/judge/comparator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o
+.PHONY : src/judge/comparator.cpp.o
+
+src/judge/comparator.i: src/judge/comparator.cpp.i
+.PHONY : src/judge/comparator.i
+
+# target to preprocess a source file
+src/judge/comparator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/comparator.cpp.i
+.PHONY : src/judge/comparator.cpp.i
+
+src/judge/comparator.s: src/judge/comparator.cpp.s
+.PHONY : src/judge/comparator.s
+
+# target to generate assembly for a file
+src/judge/comparator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/comparator.cpp.s
+.PHONY : src/judge/comparator.cpp.s
+
+src/judge/judge_service.o: src/judge/judge_service.cpp.o
+.PHONY : src/judge/judge_service.o
+
+# target to build an object file
+src/judge/judge_service.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o
+.PHONY : src/judge/judge_service.cpp.o
+
+src/judge/judge_service.i: src/judge/judge_service.cpp.i
+.PHONY : src/judge/judge_service.i
+
+# target to preprocess a source file
+src/judge/judge_service.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.i
+.PHONY : src/judge/judge_service.cpp.i
+
+src/judge/judge_service.s: src/judge/judge_service.cpp.s
+.PHONY : src/judge/judge_service.s
+
+# target to generate assembly for a file
+src/judge/judge_service.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.s
+.PHONY : src/judge/judge_service.cpp.s
+
+src/judge/pwd_util.o: src/judge/pwd_util.cpp.o
+.PHONY : src/judge/pwd_util.o
+
+# target to build an object file
+src/judge/pwd_util.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o
+.PHONY : src/judge/pwd_util.cpp.o
+
+src/judge/pwd_util.i: src/judge/pwd_util.cpp.i
+.PHONY : src/judge/pwd_util.i
+
+# target to preprocess a source file
+src/judge/pwd_util.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.i
+.PHONY : src/judge/pwd_util.cpp.i
+
+src/judge/pwd_util.s: src/judge/pwd_util.cpp.s
+.PHONY : src/judge/pwd_util.s
+
+# target to generate assembly for a file
+src/judge/pwd_util.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.s
+.PHONY : src/judge/pwd_util.cpp.s
+
+src/judge/sandbox.o: src/judge/sandbox.cpp.o
+.PHONY : src/judge/sandbox.o
+
+# target to build an object file
+src/judge/sandbox.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o
+.PHONY : src/judge/sandbox.cpp.o
+
+src/judge/sandbox.i: src/judge/sandbox.cpp.i
+.PHONY : src/judge/sandbox.i
+
+# target to preprocess a source file
+src/judge/sandbox.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.i
+.PHONY : src/judge/sandbox.cpp.i
+
+src/judge/sandbox.s: src/judge/sandbox.cpp.s
+.PHONY : src/judge/sandbox.s
+
+# target to generate assembly for a file
+src/judge/sandbox.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.s
+.PHONY : src/judge/sandbox.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -273,6 +369,30 @@ src/routes/problem_routes.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.s
 .PHONY : src/routes/problem_routes.cpp.s
 
+src/routes/submission_routes.o: src/routes/submission_routes.cpp.o
+.PHONY : src/routes/submission_routes.o
+
+# target to build an object file
+src/routes/submission_routes.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o
+.PHONY : src/routes/submission_routes.cpp.o
+
+src/routes/submission_routes.i: src/routes/submission_routes.cpp.i
+.PHONY : src/routes/submission_routes.i
+
+# target to preprocess a source file
+src/routes/submission_routes.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.i
+.PHONY : src/routes/submission_routes.cpp.i
+
+src/routes/submission_routes.s: src/routes/submission_routes.cpp.s
+.PHONY : src/routes/submission_routes.s
+
+# target to generate assembly for a file
+src/routes/submission_routes.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.s
+.PHONY : src/routes/submission_routes.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -291,6 +411,18 @@ help:
 	@echo "... src/db/db_conn.o"
 	@echo "... src/db/db_conn.i"
 	@echo "... src/db/db_conn.s"
+	@echo "... src/judge/comparator.o"
+	@echo "... src/judge/comparator.i"
+	@echo "... src/judge/comparator.s"
+	@echo "... src/judge/judge_service.o"
+	@echo "... src/judge/judge_service.i"
+	@echo "... src/judge/judge_service.s"
+	@echo "... src/judge/pwd_util.o"
+	@echo "... src/judge/pwd_util.i"
+	@echo "... src/judge/pwd_util.s"
+	@echo "... src/judge/sandbox.o"
+	@echo "... src/judge/sandbox.i"
+	@echo "... src/judge/sandbox.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
@@ -300,6 +432,9 @@ help:
 	@echo "... src/routes/problem_routes.o"
 	@echo "... src/routes/problem_routes.i"
 	@echo "... src/routes/problem_routes.s"
+	@echo "... src/routes/submission_routes.o"
+	@echo "... src/routes/submission_routes.i"
+	@echo "... src/routes/submission_routes.s"
 .PHONY : help
 
 

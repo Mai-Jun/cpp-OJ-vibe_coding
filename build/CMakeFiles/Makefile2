@@ -81,12 +81,12 @@ clean: CMakeFiles/oj_server.dir/clean
 CMakeFiles/oj_server.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/oj_server.dir/build.make CMakeFiles/oj_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target oj_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12 "Built target oj_server"
 .PHONY : CMakeFiles/oj_server.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/oj_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/mai/cpp-OJ-vibe_coding/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mai/cpp-OJ-vibe_coding/build/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/oj_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/mai/cpp-OJ-vibe_coding/build/CMakeFiles 0
 .PHONY : CMakeFiles/oj_server.dir/rule

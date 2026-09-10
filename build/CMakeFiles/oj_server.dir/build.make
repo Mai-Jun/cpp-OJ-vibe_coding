@@ -153,6 +153,76 @@ CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/mai/cpp-OJ-vibe_coding/src/routes/problem_routes.cpp -o CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.s
 
+CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o: CMakeFiles/oj_server.dir/flags.make
+CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o: ../src/routes/submission_routes.cpp
+CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o: CMakeFiles/oj_server.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o -MF CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o.d -o CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o -c /home/mai/cpp-OJ-vibe_coding/src/routes/submission_routes.cpp
+
+CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/mai/cpp-OJ-vibe_coding/src/routes/submission_routes.cpp > CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.i
+
+CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/mai/cpp-OJ-vibe_coding/src/routes/submission_routes.cpp -o CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.s
+
+CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o: CMakeFiles/oj_server.dir/flags.make
+CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o: ../src/judge/sandbox.cpp
+CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o: CMakeFiles/oj_server.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o -MF CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o.d -o CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o -c /home/mai/cpp-OJ-vibe_coding/src/judge/sandbox.cpp
+
+CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/mai/cpp-OJ-vibe_coding/src/judge/sandbox.cpp > CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.i
+
+CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/mai/cpp-OJ-vibe_coding/src/judge/sandbox.cpp -o CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.s
+
+CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o: CMakeFiles/oj_server.dir/flags.make
+CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o: ../src/judge/comparator.cpp
+CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o: CMakeFiles/oj_server.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o -MF CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o.d -o CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o -c /home/mai/cpp-OJ-vibe_coding/src/judge/comparator.cpp
+
+CMakeFiles/oj_server.dir/src/judge/comparator.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/oj_server.dir/src/judge/comparator.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/mai/cpp-OJ-vibe_coding/src/judge/comparator.cpp > CMakeFiles/oj_server.dir/src/judge/comparator.cpp.i
+
+CMakeFiles/oj_server.dir/src/judge/comparator.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/oj_server.dir/src/judge/comparator.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/mai/cpp-OJ-vibe_coding/src/judge/comparator.cpp -o CMakeFiles/oj_server.dir/src/judge/comparator.cpp.s
+
+CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o: CMakeFiles/oj_server.dir/flags.make
+CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o: ../src/judge/judge_service.cpp
+CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o: CMakeFiles/oj_server.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o -MF CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o.d -o CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o -c /home/mai/cpp-OJ-vibe_coding/src/judge/judge_service.cpp
+
+CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/mai/cpp-OJ-vibe_coding/src/judge/judge_service.cpp > CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.i
+
+CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/mai/cpp-OJ-vibe_coding/src/judge/judge_service.cpp -o CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.s
+
+CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o: CMakeFiles/oj_server.dir/flags.make
+CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o: ../src/judge/pwd_util.cpp
+CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o: CMakeFiles/oj_server.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o -MF CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o.d -o CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o -c /home/mai/cpp-OJ-vibe_coding/src/judge/pwd_util.cpp
+
+CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/mai/cpp-OJ-vibe_coding/src/judge/pwd_util.cpp > CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.i
+
+CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/mai/cpp-OJ-vibe_coding/src/judge/pwd_util.cpp -o CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.s
+
 # Object files for target oj_server
 oj_server_OBJECTS = \
 "CMakeFiles/oj_server.dir/src/main.cpp.o" \
@@ -160,7 +230,12 @@ oj_server_OBJECTS = \
 "CMakeFiles/oj_server.dir/src/auth/password.cpp.o" \
 "CMakeFiles/oj_server.dir/src/auth/session.cpp.o" \
 "CMakeFiles/oj_server.dir/src/routes/auth_routes.cpp.o" \
-"CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.o"
+"CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.o" \
+"CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o" \
+"CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o" \
+"CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o" \
+"CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o" \
+"CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o"
 
 # External object files for target oj_server
 oj_server_EXTERNAL_OBJECTS =
@@ -171,12 +246,17 @@ oj_server: CMakeFiles/oj_server.dir/src/auth/password.cpp.o
 oj_server: CMakeFiles/oj_server.dir/src/auth/session.cpp.o
 oj_server: CMakeFiles/oj_server.dir/src/routes/auth_routes.cpp.o
 oj_server: CMakeFiles/oj_server.dir/src/routes/problem_routes.cpp.o
+oj_server: CMakeFiles/oj_server.dir/src/routes/submission_routes.cpp.o
+oj_server: CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o
+oj_server: CMakeFiles/oj_server.dir/src/judge/comparator.cpp.o
+oj_server: CMakeFiles/oj_server.dir/src/judge/judge_service.cpp.o
+oj_server: CMakeFiles/oj_server.dir/src/judge/pwd_util.cpp.o
 oj_server: CMakeFiles/oj_server.dir/build.make
 oj_server: /usr/lib/x86_64-linux-gnu/libcrypto.so
 oj_server: /usr/lib/x86_64-linux-gnu/libmysqlclient.so
 oj_server: /usr/lib/x86_64-linux-gnu/libz.so
 oj_server: CMakeFiles/oj_server.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable oj_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/mai/cpp-OJ-vibe_coding/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable oj_server"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/oj_server.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
