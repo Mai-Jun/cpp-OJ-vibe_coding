@@ -187,4 +187,19 @@ CMakeFiles/oj_server.dir/src/judge/sandbox.cpp.o: \
  /usr/include/c++/11/bits/invoke.h /usr/include/c++/11/bits/refwrap.h \
  /usr/include/c++/11/bits/unique_ptr.h \
  /usr/include/c++/11/bits/this_thread_sleep.h \
- /home/mai/cpp-OJ-vibe_coding/src/judge/pwd_util.h
+ /home/mai/cpp-OJ-vibe_coding/src/judge/pwd_util.h \
+ /usr/include/linux/audit.h /usr/include/linux/types.h \
+ /usr/include/x86_64-linux-gnu/asm/types.h \
+ /usr/include/asm-generic/types.h /usr/include/asm-generic/int-ll64.h \
+ /usr/include/x86_64-linux-gnu/asm/bitsperlong.h \
+ /usr/include/asm-generic/bitsperlong.h /usr/include/linux/posix_types.h \
+ /usr/include/linux/stddef.h \
+ /usr/include/x86_64-linux-gnu/asm/posix_types.h \
+ /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
+ /usr/include/asm-generic/posix_types.h /usr/include/linux/elf-em.h \
+ /usr/include/linux/filter.h /usr/include/linux/bpf_common.h \
+ /usr/include/linux/seccomp.h /usr/include/x86_64-linux-gnu/sys/prctl.h \
+ /usr/include/linux/prctl.h /usr/include/x86_64-linux-gnu/sys/syscall.h \
+ /usr/include/x86_64-linux-gnu/asm/unistd.h \
+ /usr/include/x86_64-linux-gnu/asm/unistd_64.h \
+ /usr/include/x86_64-linux-gnu/bits/syscall.h

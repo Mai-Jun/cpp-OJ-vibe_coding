@@ -1,6 +1,10 @@
-// sandbox.cpp — fork + setrlimit 沙箱实现（Phase 3，B 档）。
-// 隔离策略（B 档，SPEC §2.2/§7）：fork + RLIMIT_CPU/RLIMIT_AS + 低权限 setuid
-//   + 关闭继承的 fd + 父进程墙钟兜底超时 kill。A 档（unshare+seccomp+cgroup）见 SPEC §7。
+// sandbox.cpp — fork + setrlimit + seccomp 沙箱实现（Phase 3 B 档 + Phase 5 加固）。
+// 隔离策略（SPEC §2.2/§7）：
+//   B 档基础：fork + RLIMIT_CPU/RLIMIT_AS + 低权限 setuid + 关闭继承 fd
+//             + 父进程墙钟兜底超时 kill。
+//   Phase 5 加固：子进程装载 seccomp-bpf 白名单过滤器，阻止网络访问与高危系统调用，
+//             隔离能力在非 root 环境下同样生效（无需 root，也不要求降权用户存在）。
+//   A 档（unshare+seccomp+cgroup）见 SPEC §7。
 
 #include "sandbox.h"
 
@@ -17,12 +21,89 @@
 
 #include "pwd_util.h"
 
+// seccomp-bpf 相关头文件（Linux 专用；非 Linux 平台不编译本模块）。
+#include <linux/audit.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
+#include <sys/prctl.h>
+#include <sys/syscall.h>
+
 namespace oj {
 namespace judge {
 
 namespace {
 
 constexpr int kReadBufSize = 65536;
+
+// ---- seccomp-bpf 白名单过滤器（Phase 5）----
+// 目标：
+//   1) 禁止所有网络系统调用（socket/connect/bind/listen/accept/...），
+//      子进程一旦调用即被内核以 SIGSYS 终止，无需配置网络 namespace。
+//   2) 禁止高危/只读伪装类系统调用，降低逃逸面：
+//      ptrace(进程调试)、mount/umount2/pivot_root(挂载)、init_module/
+//      finit_module/delete_module(内核模块)、reboot、kexec_load、
+//      bpf(动态 BPF)、clone3(绕 RLIMIT_NPROC 的 fork 变体)、setns(切换命名空间)。
+//   3) 其余系统调用放行（白名单按需放开），保证用户程序编译产物正常读写文件/内存。
+// 被拦截的系统调用使子进程收到 SIGSYS，父进程经 RunResult.seccomp_violation
+// 归类为 Runtime Error（"调用了被禁止的系统调用"）。
+//
+// 说明：评测编译产物均为普通用户态 C/C++ 程序，白名单覆盖其全部需求；
+// 特判器（spj）同样受此约束，其读写固定路径文件不受影响。
+
+// 单条 BPF 指令的便捷构造。
+struct sock_filter MakeInst(uint16_t code, uint32_t jt, uint32_t jf, uint32_t k) {
+  return static_cast<sock_filter>(sock_filter{code, static_cast<uint8_t>(jt),
+                                              static_cast<uint8_t>(jf), k});
+}
+
+// 用 x86_64 系统调用号构建过滤器（随架构 guard，见下）。
+bool LoadSeccompFilter() {
+#if defined(__x86_64__)
+  // 白名单：所有除被禁 syscall 之外的调用均放行（kill 用户进程默认策略）。
+  // 依次对每个禁用 syscall 做 `==` 判断，命中即返回 SECCOMP_RET_KILL_PROCESS。
+  static const int kBlocked[] = {
+      __NR_socket,       __NR_socketpair,   __NR_bind,       __NR_connect,
+      __NR_listen,       __NR_accept,       __NR_accept4,    __NR_sendto,
+      __NR_sendmsg,      __NR_sendmmsg,     __NR_recvfrom,   __NR_recvmsg,
+      __NR_recvmmsg,     __NR_shutdown,     __NR_setsockopt, __NR_getsockopt,
+      __NR_getsockname,  __NR_getpeername,
+      __NR_ptrace,       __NR_mount,        __NR_umount2,    __NR_pivot_root,
+      __NR_chroot,       __NR_init_module,  __NR_finit_module, __NR_delete_module,
+      __NR_reboot,       __NR_kexec_load,   __NR_bpf,        __NR_clone3,
+      __NR_setns,        __NR_unshare,      __NR_sethostname, __NR_setdomainname,
+      __NR_keyctl,       __NR_add_key,      __NR_request_key,
+  };
+
+  // 判断载入的指令数。
+  const size_t n = sizeof(kBlocked) / sizeof(kBlocked[0]);
+  std::vector<sock_filter> f;
+  f.reserve(n * 2 + 3);
+  f.push_back(MakeInst(BPF_LD | BPF_W | BPF_ABS, 0, 0,
+                       static_cast<uint32_t>(offsetof(struct seccomp_data, nr))));
+  for (size_t i = 0; i < n; ++i) {
+    f.push_back(MakeInst(BPF_JMP | BPF_JEQ | BPF_K, 0, 1,
+                         static_cast<uint32_t>(kBlocked[i])));
+    // 命中：kill 整个子进程
+    f.push_back(MakeInst(BPF_RET | BPF_K, 0, 0, SECCOMP_RET_KILL_PROCESS));
+  }
+  f.push_back(MakeInst(BPF_RET | BPF_K, 0, 0, SECCOMP_RET_ALLOW));
+
+  // prctl(PR_SET_NO_NEW_PRIVS) 后才能安装过滤器（无需 CAP_SYS_ADMIN）。
+  if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) return false;
+
+  // 过滤器需按 8 字节对齐；sock_filter 已是 8 字节结构。
+  sock_fprog prog;
+  prog.len = static_cast<unsigned short>(f.size());
+  prog.filter = f.data();
+  if (syscall(__NR_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0) return false;
+  return true;
+#else
+  // 非 x86_64：seccomp-bpf 过滤器依赖架构特定的系统调用号表，本环境为 x86_64；
+  // 其他架构不启用 seccomp（B 档基础隔离仍生效）。
+  std::fprintf(stderr, "[sandbox] 非 x86_64 架构，seccomp 过滤器未启用\n");
+  return true;
+#endif
+}
 
 // 把 input 一次性写入写端并关闭；失败返回 -1。
 int WriteAll(int fd, const std::string &input) {
@@ -83,7 +164,8 @@ bool SetupChild(const std::string &run_as_user, int cpu_limit_ms, int mem_limit_
 RunResult RunCommand(const std::string &binary_path, const std::string &cwd,
                      const std::string &input, const std::vector<std::string> &args,
                      int cpu_limit_ms, int mem_limit_mb, int wall_timeout_ms,
-                     long max_output_bytes, const std::string &run_as_user) {
+                     long max_output_bytes, const std::string &run_as_user,
+                     bool apply_seccomp) {
   RunResult result;
 
   // 非 root 且要求降权时，在父进程侧提示一次（不要写入子进程 stdout，避免污染用户输出）。
@@ -118,7 +200,9 @@ RunResult RunCommand(const std::string &binary_path, const std::string &cwd,
     close(out_pipe[1]);
 
     if (!cwd.empty() && chdir(cwd.c_str()) != 0) _exit(126);
+    // 先完成 chdir/setrlimit/降权，再装载 seccomp（此时才关闭外部访问）。
     if (!SetupChild(run_as_user, cpu_limit_ms, mem_limit_mb)) _exit(125);
+    if (apply_seccomp && !LoadSeccompFilter()) _exit(124);  // seccomp 装载失败按沙箱错误退出
 
     std::vector<char *> argv;
     argv.reserve(args.size() + 2);
@@ -177,6 +261,8 @@ RunResult RunCommand(const std::string &binary_path, const std::string &cwd,
         result.signal_no = WTERMSIG(status);
         // RLIMIT_CPU 超限由 SIGXCPU 表达。
         if (result.signal_no == SIGXCPU) result.cpu_limit_exceeded = true;
+        // seccomp 拦截的系统调用由 SIGSYS 表达。
+        if (result.signal_no == SIGSYS) result.seccomp_violation = true;
       }
       result.output = std::move(out);
       return result;

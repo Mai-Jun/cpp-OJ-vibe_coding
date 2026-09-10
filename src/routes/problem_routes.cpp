@@ -225,6 +225,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
   // ---- 题目列表（登录）----
   // 可选 query 过滤：?difficulty=xxx &tag=xxx
   svr.Get("/api/problems", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess = RequireSession(db, req);
     if (!sess.ok) {
       JsonError(res, 401, "请先登录");
@@ -276,6 +277,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
 
   // ---- 题目详情（登录）：含描述 + 用例列表 ----
   svr.Get(R"(/api/problems/(\d+))", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess = RequireSession(db, req);
     if (!sess.ok) {
       JsonError(res, 401, "请先登录");
@@ -325,6 +327,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
 
   // ---- 新增题目（管理员）----
   svr.Post("/api/problems", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess;
     if (!RequireAdmin(db, req, sess)) {
       JsonError(res, 403, "需要管理员权限");
@@ -409,6 +412,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
 
   // ---- 修改题目（管理员）：覆盖题目字段，并可选整体替换用例 ----
   svr.Put(R"(/api/problems/(\d+))", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess;
     if (!RequireAdmin(db, req, sess)) {
       JsonError(res, 403, "需要管理员权限");
@@ -506,6 +510,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
 
   // ---- 删除题目（管理员）：test_cases 级联删除 ----
   svr.Delete(R"(/api/problems/(\d+))", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess;
     if (!RequireAdmin(db, req, sess)) {
       JsonError(res, 403, "需要管理员权限");
@@ -529,6 +534,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
 
   // ---- 添加测试用例（管理员，追加到末尾）----
   svr.Post(R"(/api/problems/(\d+)/cases)", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess;
     if (!RequireAdmin(db, req, sess)) {
       JsonError(res, 403, "需要管理员权限");
@@ -595,6 +601,7 @@ void RegisterProblemRoutes(httplib::Server &svr, MYSQL *db) {
 
   // ---- zip 导入测试用例（管理员，multipart 上传，整体替换该题用例）----
   svr.Post(R"(/api/problems/(\d+)/import)", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess;
     if (!RequireAdmin(db, req, sess)) {
       JsonError(res, 403, "需要管理员权限");

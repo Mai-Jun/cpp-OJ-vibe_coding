@@ -58,6 +58,17 @@ int main(int argc, char **argv) {
   // 限制请求体大小，防 DoS（后续注册/提交会用到）
   svr.set_payload_max_length(1024 * 1024);
 
+  // HTTP 安全响应头（Phase 5）：防止点击劫持 / MIME 嗅探 / 限制资源来源。
+  // CSP 说明：前端为第一方静态页面，含内联 <script>（非用户可控），故放行内联脚本；
+  // 其余资源（图片/样式/连接）限制为同源。若未来将内联脚本外置，可收紧为无 'unsafe-inline'。
+  svr.set_default_headers({
+      {"X-Content-Type-Options", "nosniff"},
+      {"X-Frame-Options", "DENY"},
+      {"Referrer-Policy", "no-referrer"},
+      {"Content-Security-Policy",
+       "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"},
+  });
+
   // 初始化 MySQL：连不上即 fail-fast，避免带病运行
   MYSQL db;
   oj::DbConfig db_cfg = oj::DbConfigFromEnv();

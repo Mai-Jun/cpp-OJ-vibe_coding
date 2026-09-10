@@ -69,7 +69,8 @@ CompareResult RunSpj(const std::string &spj_bin, const std::string &input_file,
   }
   std::vector<std::string> args{input_file, user_file, answer_file};
   // spj 运行限额（独立于题目限额，防止恶意 spj 耗资源）。
-  RunResult r = RunCommand(spj_bin, work_dir, "", args, 5000, 512, 15000, 64 * 1024, "");
+  // 特判器同样在 seccomp 白名单沙箱内运行（拦截网络与高危系统调用）。
+  RunResult r = RunCommand(spj_bin, work_dir, "", args, 5000, 512, 15000, 64 * 1024, "", true);
   if (r.kind != ExitKind::kFinished) {
     err = "spj 运行异常: " + r.error_msg;
     return CompareResult::kJudgeError;

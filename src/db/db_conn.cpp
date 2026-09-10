@@ -5,6 +5,13 @@
 
 namespace oj {
 
+namespace {
+// 全局共享连接互斥锁（Phase 5）：串行化对同一 MYSQL 连接的访问。
+std::mutex g_db_mutex;
+}  // namespace
+
+std::mutex &DbMutex() { return g_db_mutex; }
+
 DbConfig DbConfigFromEnv() {
   DbConfig cfg;
   if (const char *v = std::getenv("OJ_DB_HOST")) cfg.host = v;

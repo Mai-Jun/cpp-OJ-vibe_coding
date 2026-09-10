@@ -12,6 +12,7 @@
 
 #include <mysql.h>
 
+#include <mutex>
 #include <string>
 
 namespace oj {
@@ -32,6 +33,24 @@ bool DbConnect(MYSQL *conn, const DbConfig &cfg);
 
 // 转义字符串内容（不含引号），调用方负责包裹引号；失败返回空串。
 std::string DbEscape(MYSQL *conn, const std::string &raw);
+
+// ---- HTTP 请求线程共享连接保护（Phase 5）----
+// cpp-httplib 默认以线程池并发处理请求，而路由层复用同一个 MYSQL 连接，
+// 多个线程同时在连接上 mysql_query/store_result 会互相污染（"Commands out of sync"）。
+// 解决：所有使用共享连接的路由处理器在入口处持有一把 DbLock 全局互斥锁，
+// 使对同一连接的查询/读取/释放原子化（串行执行，评测 worker 使用独立连接不受影响）。
+
+// 全局互斥锁访问点（进程内单例）。
+std::mutex &DbMutex();
+
+// RAII 作用域锁：构造加锁、析构解锁。
+class DbLock {
+ public:
+  DbLock() { DbMutex().lock(); }
+  ~DbLock() { DbMutex().unlock(); }
+  DbLock(const DbLock &) = delete;
+  DbLock &operator=(const DbLock &) = delete;
+};
 
 }  // namespace oj
 

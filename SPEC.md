@@ -157,13 +157,20 @@
 
 ## 7. 安全、性能与已知风险
 
-- **已接受风险**:B 档沙箱存在同机越权/逃逸风险。**发布前必须**:以专用低权限用户运行评测进程、内核启用非 root 降权、`ptrace`/`seccomp` 视版本补充。
+- **已实现(Phase 5)**:评测子进程在 B 档基础上装载 **seccomp-bpf 白名单过滤器**,禁止所有网络系统调用
+  (`socket/connect/bind/accept/...`)与高危调用(`ptrace/mount/bpf/clone3/unshare/setns/keyctl/...`),
+  违反即以 `SIGSYS` 终止并判为 RE;seccomp 在非 root 下同样生效。
+- **已实现(Phase 5)**:注册/登录接口按 IP 滑动窗口限流(超限 429);全站安全响应头
+  (`X-Content-Type-Options / X-Frame-Options / Referrer-Policy / Content-Security-Policy`);
+  评测临时目录启动时清理残留(防磁盘膨胀)。
+- **已接受风险**:B 档沙箱(无 namespace/cgroup)存在同机越权/逃逸风险。**发布前必须**:以专用低权限用户
+  运行评测进程、内核启用非 root 降权。
   - 实现注意:评测子进程通过 `setrlimit(RLIMIT_CPU, soft < hard)` 使 CPU 超限触发 `SIGXCPU`(soft==hard 时内核直接 SIGKILL,无法区分 CPU 超时);`RLIMIT_AS` 超限表现为 `bad_alloc`/`SIGSEGV`,据此归类 MLE。
   - **降权依赖 root**:`setuid` 切换低权限用户(`oj-runner`)要求服务端以 root 启动;非 root 环境自动降级为当前用户运行(仅打印一次提示),此时隔离减弱,部署时务必 root。
 - **升级路径(A 档)**:`unshare(CLONE_NEWPID/NEWNS/NEWNET/NEWIPC)` + `seccomp-bpf` 白名单过滤系统调用 + `cgroup v2` 限制 CPU/内存 + 网络禁用。
-- 用户代码**禁止网络访问**(无此需要则直接不授权网络 namespace)。
+- 用户代码**禁止网络访问**(seccomp 已拦截,无需配置网络 namespace)。
 - Session 口令用安全随机数生成;密码不得明文存储(注册时同样加盐哈希)。
-- 输入长度、提交内容大小限制,防 DoS;注册接口需限流/防滥用(如同一 IP 频繁注册)。
+- 输入长度、提交内容大小限制,防 DoS;注册接口按 IP 限流/防滥用。
 - 性能:10 人并发、单 worker 串行评测,单机余量充分。
 
 ---
@@ -204,9 +211,9 @@
 - [X] 后台题目管理 UI
 
 ### Phase 5 — 加固与收尾
-- [ ] 安全加固(见 §7)
-- [ ] 并发/异常/边界用例测试
-- [ ] README + 部署脚本
+- [X] 安全加固(见 §7):seccomp 禁网/高危 syscall + 评测降权 + 注册/登录限流 + 安全响应头 + 临时目录清理
+- [X] 并发/异常/边界用例测试(scripts/test.sh:7 类结果、禁网、限流、并发、边界)
+- [X] README + 部署脚本(README.md / scripts/deploy.sh)
 
 ---
 

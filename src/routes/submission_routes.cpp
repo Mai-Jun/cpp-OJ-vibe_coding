@@ -74,6 +74,7 @@ void RegisterSubmissionRoutes(httplib::Server &svr, MYSQL *db,
                               judge::JudgeService *judge) {
   // ---- 提交代码（登录；异步返回 submission_id）----
   svr.Post("/api/submissions", [db, judge](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess = RequireSession(db, req);
     if (!sess.ok) {
       JsonError(res, 401, "请先登录");
@@ -124,6 +125,7 @@ void RegisterSubmissionRoutes(httplib::Server &svr, MYSQL *db,
 
   // ---- 轮询结果（登录；仅本人可见）----
   svr.Get(R"(/api/submissions/(\d+))", [db, judge](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess = RequireSession(db, req);
     if (!sess.ok) {
       JsonError(res, 401, "请先登录");
@@ -147,6 +149,7 @@ void RegisterSubmissionRoutes(httplib::Server &svr, MYSQL *db,
 
   // ---- 我的提交记录（登录；内存态，按 id 倒序）----
   svr.Get("/api/submissions", [db, judge](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     SessionInfo sess = RequireSession(db, req);
     if (!sess.ok) {
       JsonError(res, 401, "请先登录");

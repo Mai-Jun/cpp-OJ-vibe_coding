@@ -70,6 +70,11 @@ bool ClassifyRun(const RunResult &r, int mem_limit_mb, std::string &status,
         detail = "超出时间限制 (CPU)";
         return true;
       }
+      if (r.seccomp_violation) {
+        status = "RE";
+        detail = "运行时错误: 调用被禁止的系统调用（网络/高危操作被沙箱拦截）";
+        return true;
+      }
       if (r.signal_no == SIGSEGV && LooksLikeMemoryError(r.output)) {
         status = "MLE";
         detail = "超出内存限制 (" + std::to_string(mem_limit_mb) + "MB)";
@@ -136,6 +141,37 @@ void RemoveDir(const std::string &path) {
   }
   closedir(d);
   rmdir(path.c_str());
+}
+
+// 启动时清理评测工作目录（Phase 5）：删除上次异常退出残留的临时目录。
+// 仅处理 /tmp/oj_judge 下以 "oj_" 前缀命名的目录，不递归清空基目录。
+void CleanupStaleDirs(const std::string &base) {
+  DIR *d = opendir(base.c_str());
+  if (!d) return;
+  struct dirent *ent;
+  while ((ent = readdir(d)) != nullptr) {
+    std::string name = ent->d_name;
+    if (name == "." || name == "..") continue;
+    if (name.compare(0, 3, "oj_") != 0) continue;
+    std::string full = base + "/" + name;
+    struct stat st {};
+    if (lstat(full.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) RemoveDir(full);
+  }
+  closedir(d);
+}
+
+// 确保评测工作基目录存在并清理残留（Phase 5）。
+void PrepareWorkDir() {
+  struct stat st {};
+  if (stat(kBaseWorkDir, &st) == 0) {
+    if (!S_ISDIR(st.st_mode)) {
+      std::fprintf(stderr, "[judge] %s 存在但不是目录，评测工作目录不可用\n", kBaseWorkDir);
+      return;
+    }
+  } else {
+    mkdir(kBaseWorkDir, 0755);
+  }
+  CleanupStaleDirs(kBaseWorkDir);
 }
 
 // 加载题目信息（title/限额/判题方式/spj 源码）。失败返回 false。
@@ -238,7 +274,7 @@ void JudgeService::WorkerLoop() {
     DbConfig cfg = DbConfigFromEnv();
     if (DbConnect(&db, cfg)) db_ok = true;
   }
-  mkdir(kBaseWorkDir, 0700);
+  PrepareWorkDir();
 
   for (;;) {
     Task task;
@@ -276,8 +312,13 @@ void JudgeService::RunTask(const Task &task, MYSQL *db) {
   res->created_at = NowStr();
   res->done = true;
 
+  // 独立工作目录：mkdir 0700 + chmod 0755。
+  // chmod 0755 是 root 启动 + 降权 oj-runner 运行所需的：子进程降权后仍需
+  // 读入 main.cpp / 写出输出到该目录。目录本身无敏感数据（评测用例由 worker
+  // 写入，属公开题目内容），受 seccomp + rlimit 约束的用户代码读不到系统文件。
   std::string work = std::string(kBaseWorkDir) + "/oj_" + std::to_string(task.id);
   mkdir(work.c_str(), 0700);
+  chmod(work.c_str(), 0755);
 
   // 1) 读取题目信息
   int time_limit_ms = 500, mem_limit_mb = 256;
@@ -340,7 +381,7 @@ void JudgeService::RunTask(const Task &task, MYSQL *db) {
     WriteFile(out_file, c.expected);
 
     RunResult r = RunCommand(work + "/main", work, c.input, {}, time_limit_ms, mem_limit_mb,
-                             time_limit_ms + 5000, kMaxOutputBytes, kRunnerUser);
+                             time_limit_ms + 5000, kMaxOutputBytes, kRunnerUser, true);
 
     CaseResult cr;
     cr.order_no = c.order_no;

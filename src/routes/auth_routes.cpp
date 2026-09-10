@@ -7,11 +7,29 @@
 #include "httplib.h"
 #include "json.h"
 #include "password.h"
+#include "ratelimit.h"
 #include "session.h"
 
 namespace oj {
 
 namespace {
+
+// 注册/登录按 IP 限流（Phase 5 防滥用）：同一 IP 窗口内超限返回 429。
+// 阈值宽松，正常使用不受影响；后续如需更严可调。
+RateLimiter g_register_limit(20, 60);   // 注册：60s 内 20 次
+RateLimiter g_login_limit(30, 60);      // 登录：60s 内 30 次
+
+void JsonError(httplib::Response &res, int status, const std::string &msg) {
+  res.status = status;
+  res.set_content(json::Value(json::Object{{"ok", false}, {"error", msg}}).dump(),
+                  "application/json");
+}
+
+// 从请求取客户端 IP（REMOTE_ADDR 由 httplib 在 process_request 注入）。
+std::string ClientIp(const httplib::Request &req) {
+  std::string ip = req.get_header_value("REMOTE_ADDR");
+  return ip.empty() ? "unknown" : ip;
+}
 
 // 从请求 body 解析 JSON；失败返回 null 并直接响应 400。
 json::Value ParseBody(const httplib::Request &req, httplib::Response &res) {
@@ -79,6 +97,11 @@ bool ValidPassword(const std::string &p) { return p.size() >= 6 && p.size() <= 6
 void RegisterAuthRoutes(httplib::Server &svr, MYSQL *db, const std::string &admin_conf_path) {
   // ---- 注册（普通用户，公开）----
   svr.Post("/api/auth/register", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
+    if (!g_register_limit.Allow(ClientIp(req))) {
+      JsonError(res, 429, "注册过于频繁，请稍后再试");
+      return;
+    }
     json::Value body = ParseBody(req, res);
     if (res.status == 400) return;
 
@@ -135,6 +158,11 @@ void RegisterAuthRoutes(httplib::Server &svr, MYSQL *db, const std::string &admi
 
   // ---- 普通用户登录（公开）----
   svr.Post("/api/auth/login", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
+    if (!g_login_limit.Allow(ClientIp(req))) {
+      JsonError(res, 429, "登录尝试过于频繁，请稍后再试");
+      return;
+    }
     json::Value body = ParseBody(req, res);
     if (res.status == 400) return;
     std::string username = body.get("username").as_string();
@@ -183,6 +211,10 @@ void RegisterAuthRoutes(httplib::Server &svr, MYSQL *db, const std::string &admi
   svr.Post("/api/auth/admin/login",
            [admin_conf_path, db](const httplib::Request &req, httplib::Response &res) {
              (void)db;
+             if (!g_login_limit.Allow(ClientIp(req))) {
+               JsonError(res, 429, "登录尝试过于频繁，请稍后再试");
+               return;
+             }
              json::Value body = ParseBody(req, res);
              if (res.status == 400) return;
              std::string cfg_uname, cfg_upass;
@@ -210,6 +242,7 @@ void RegisterAuthRoutes(httplib::Server &svr, MYSQL *db, const std::string &admi
 
   // ---- 登出（登录态可调用）----
   svr.Post("/api/auth/logout", [db](const httplib::Request &req, httplib::Response &res) {
+    DbLock lock;  // 共享连接串行化（Phase 5）
     std::string token = ExtractToken(req);
     if (!token.empty()) DestroySession(db, token);
     ClearCookie(res);
