@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>题目列表 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="wide">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="container wide">
+    <div class="alert" id="alert"></div>
+
+    <div class="card">
+      <div class="list-head">
+        <h2 style="margin:0;">题库</h2>
+        <div class="filters">
+          <select id="filterDiff">
+            <option value="">全部难度</option>
+            <option value="easy">easy</option>
+            <option value="medium">medium</option>
+            <option value="hard">hard</option>
+          </select>
+          <input type="text" id="filterTag" placeholder="按标签过滤，回车确认">
+        </div>
+      </div>
+      <ul class="problem-list" id="problemList">
+        <li class="muted-row">加载中...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
+      if (!requireLogin()) return;
+
+      const listEl = document.getElementById("problemList");
+      const alertEl = document.getElementById("alert");
+      const diffSel = document.getElementById("filterDiff");
+      const tagInput = document.getElementById("filterTag");
+
+      function showErr(msg) {
+        alertEl.className = "alert error";
+        alertEl.textContent = msg;
+      }
+
+      async function load() {
+        const params = new URLSearchParams();
+        if (diffSel.value) params.set("difficulty", diffSel.value);
+        if (tagInput.value.trim()) params.set("tag", tagInput.value.trim());
+        const qs = params.toString();
+        const path = qs ? `/api/problems?${qs}` : "/api/problems";
+
+        listEl.innerHTML = '<li class="muted-row">加载中...</li>';
+        try {
+          const data = await apiFetch(path);
+          const problems = data.problems || [];
+          if (!problems.length) {
+            listEl.innerHTML = '<li class="muted-row">没有符合条件的题目</li>';
+            return;
+          }
+          listEl.innerHTML = "";
+          for (const p of problems) {
+            const tags = (p.tags || "").split(",").filter(t => t.trim())
+              .map(t => `<span class="badge tag">${esc(t.trim())}</span>`).join("");
+            const li = document.createElement("li");
+            li.innerHTML = `
+              <div class="prob-row">
+                <a class="prob-title" href="/problem.html?id=${p.id}">${esc(p.title)}</a>
+                <div class="meta">
+                  <span class="${DIFF_CLASS[p.difficulty] || 'badge'}">${esc(p.difficulty)}</span>
+                  ${tags}
+                  <span class="muted">${p.time_limit_ms}ms / ${p.memory_limit_mb}MB</span>
+                </div>
+              </div>
+              <span class="goto">›</span>`;
+            listEl.appendChild(li);
+          }
+        } catch (err) {
+          listEl.innerHTML = "";
+          showErr(err.message);
+        }
+      }
+
+      diffSel.addEventListener("change", load);
+      tagInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") load();
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

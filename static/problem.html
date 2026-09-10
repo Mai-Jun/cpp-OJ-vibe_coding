@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>题目 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="wide">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="container wide">
+    <div class="alert" id="alert"></div>
+
+    <div id="probCard">
+      <div class="card prob-head">
+        <div class="prob-head-top">
+          <h2 id="probTitle" style="margin:0;">加载中...</h2>
+          <a class="btn-sm btn-secondary" id="subListLink" href="/submissions.html">我的提交记录</a>
+        </div>
+        <div class="meta" id="probMeta" style="margin:.4rem 0 0;"></div>
+      </div>
+
+      <div class="split">
+        <div class="card prob-desc" id="probDesc">加载中...</div>
+        <div class="card editor-card">
+          <div class="editor-toolbar">
+            <span class="muted">main.cpp</span>
+            <div class="end">
+              <button type="button" class="btn-sm btn-secondary" id="resetBtn">重置模板</button>
+              <button type="button" class="btn-sm" id="submitBtn">提交评测</button>
+            </div>
+          </div>
+          <div id="editor"></div>
+        </div>
+      </div>
+
+      <div class="card" id="resultCard" style="display:none;">
+        <div class="result-head">
+          <h2 style="margin:0;">评测结果</h2>
+          <span class="result-status" id="resultStatus">-</span>
+        </div>
+        <div class="result-detail" id="resultDetail"></div>
+        <div class="result-meta" id="resultMeta"></div>
+        <div id="compileErrBox" style="display:none;">
+          <div class="result-subtitle">编译输出</div>
+          <pre class="md-code" id="compileErr"></pre>
+        </div>
+        <div id="caseList"></div>
+        <div class="result-wa" id="waBox" style="display:none;">
+          <div class="result-subtitle">预期输出 vs 实际输出</div>
+          <div class="grid-2">
+            <div>
+              <div class="muted">期望输出</div>
+              <pre class="md-code" id="waExpected"></pre>
+            </div>
+            <div>
+              <div class="muted">实际输出</div>
+              <pre class="md-code" id="waActual"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/editor.js"></script>
+  <script>
+    (function () {
+      if (!requireLogin()) return;
+
+      const params = new URLSearchParams(location.search);
+      const problemId = Number(params.get("id"));
+
+      const alertEl = document.getElementById("alert");
+      const editorContainer = document.getElementById("editor");
+      const submitBtn = document.getElementById("submitBtn");
+      const resultCard = document.getElementById("resultCard");
+
+      let problem = null;
+      let editor = null;
+
+      function showErr(msg) {
+        alertEl.className = "alert error";
+        alertEl.textContent = msg;
+      }
+      function clearAlert() {
+        alertEl.className = "alert";
+        alertEl.textContent = "";
+      }
+
+      const DEFAULT_TEMPLATE = `#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+
+  // TODO: 在此编写你的代码
+
+  return 0;
+}`;
+
+      // ---- 加载题目 ----
+      async function loadProblem() {
+        if (!problemId) {
+          showErr("缺少题目 id");
+          return;
+        }
+        try {
+          const data = await apiFetch(`/api/problems/${problemId}`);
+          problem = data.problem;
+          renderProblem();
+        } catch (err) {
+          showErr(err.message);
+        }
+      }
+
+      function renderProblem() {
+        const p = problem;
+        document.title = `${p.title} - OnlineJudge`;
+        document.getElementById("probTitle").textContent = `${p.id}. ${p.title}`;
+
+        const tags = (p.tags || "").split(",").filter(t => t.trim())
+          .map(t => `<span class="badge tag">${esc(t.trim())}</span>`).join("");
+        document.getElementById("probMeta").innerHTML =
+          `<span class="${DIFF_CLASS[p.difficulty] || 'badge'}">${esc(p.difficulty)}</span> ${tags}` +
+          `<span class="muted" style="margin-left:.4rem;">${p.time_limit_ms}ms / ${p.memory_limit_mb}MB` +
+          ` · ${p.judge_type === "special" ? "特判" : "逐字节对比"}</span>`;
+
+        document.getElementById("probDesc").innerHTML =
+          `<div class="md-body">${renderMarkdown(p.description)}</div>`;
+
+        editor = CodeEditor.createEditor(editorContainer, {
+          value: DEFAULT_TEMPLATE,
+          placeholder: "// 在此输入 C++ 代码",
+          tabSize: 2,
+        });
+      }
+
+      // ---- 提交 ----
+      async function submit() {
+        clearAlert();
+        const code = editor.getValue();
+        if (!code.trim()) {
+          showErr("代码不能为空");
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = "提交中...";
+        try {
+          const sid = await submitSolution(problemId, code);
+          submitBtn.textContent = "评测中...";
+          resultCard.style.display = "";
+          resultCard.scrollIntoView({ behavior: "smooth" });
+          const sub = await pollSubmission(sid);
+          renderResult(sub);
+        } catch (err) {
+          showErr(err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "提交评测";
+        }
+      }
+
+      function renderResult(sub) {
+        const statusEl = document.getElementById("resultStatus");
+        const detailEl = document.getElementById("resultDetail");
+        const metaEl = document.getElementById("resultMeta");
+        const ceBox = document.getElementById("compileErrBox");
+        const caseListEl = document.getElementById("caseList");
+        const waBox = document.getElementById("waBox");
+
+        statusEl.className = "result-status " + statusClass(sub.status);
+        statusEl.textContent = sub.status;
+        detailEl.textContent = sub.detail || (sub.status === "Accepted" ? "全部测试用例通过" : "");
+
+        metaEl.textContent = "";
+        if (sub.time_ms > 0) metaEl.textContent += `耗时 ${sub.time_ms}ms`;
+        if (sub.memory_mb > 0) metaEl.textContent += (metaEl.textContent ? " · " : "") + `内存 ${sub.memory_mb}MB`;
+        if (metaEl.textContent) metaEl.textContent = "(" + metaEl.textContent + ")";
+
+        ceBox.style.display = sub.status === "Compile Error" ? "" : "none";
+        document.getElementById("compileErr").textContent = sub.compile_error || "";
+
+        // 用例明细
+        const cases = sub.cases || [];
+        caseListEl.innerHTML = "";
+        if (cases.length) {
+          const ul = document.createElement("ul");
+          ul.className = "case-result-list";
+          for (const c of cases) {
+            const li = document.createElement("li");
+            li.innerHTML = `<span class="case-name">用例 #${c.order_no}</span>` +
+              `<span class="case-status ${statusClass(c.status)}">${esc(c.status)}</span>` +
+              `<span class="muted">${c.time_ms}ms</span>`;
+            ul.appendChild(li);
+          }
+          caseListEl.appendChild(ul);
+        }
+
+        // WA 对比
+        const waCase = cases.find(c => c.status === "WA");
+        waBox.style.display = waCase ? "" : "none";
+        if (waCase) {
+          document.getElementById("waExpected").textContent = waCase.expected_output;
+          document.getElementById("waActual").textContent = waCase.user_output;
+        }
+      }
+
+      submitBtn.addEventListener("click", submit);
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        editor.setValue(DEFAULT_TEMPLATE);
+      });
+
+      loadProblem();
+    })();
+  </script>
+</body>
+</html>

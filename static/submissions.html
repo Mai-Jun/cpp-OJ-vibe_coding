@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提交记录 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="wide">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="container wide">
+    <div class="alert" id="alert"></div>
+
+    <div class="card">
+      <div class="list-head">
+        <h2 style="margin:0;">我的提交记录</h2>
+        <button id="refreshBtn" class="btn-sm btn-secondary">刷新</button>
+      </div>
+      <ul class="submission-list" id="subList">
+        <li class="muted-row">加载中...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
+      if (!requireLogin()) return;
+
+      const listEl = document.getElementById("subList");
+      const alertEl = document.getElementById("alert");
+
+      function showErr(msg) {
+        alertEl.className = "alert error";
+        alertEl.textContent = msg;
+      }
+
+      async function load() {
+        listEl.innerHTML = '<li class="muted-row">加载中...</li>';
+        try {
+          const subs = await loadMySubmissions(50);
+          if (!subs.length) {
+            listEl.innerHTML = '<li class="muted-row">还没有提交记录，去 <a href="/problems.html">题库</a> 做题吧</li>';
+            return;
+          }
+          listEl.innerHTML = "";
+          for (const s of subs) {
+            const li = document.createElement("li");
+            li.innerHTML = `
+              <div class="sub-row">
+                <a class="prob-title" href="/problem.html?id=${s.problem_id}">${esc(s.problem_title)}</a>
+                <div class="meta">
+                  <span class="${statusClass(s.status)}">${esc(s.status)}</span>
+                  <span class="muted">${timeAgo(s.created_at)}</span>
+                </div>
+              </div>
+              <div class="sub-extra muted">
+                <span>#${s.id}</span>
+                ${s.time_ms > 0 ? `<span>${s.time_ms}ms</span>` : ""}
+                ${s.memory_mb > 0 ? `<span>${s.memory_mb}MB</span>` : ""}
+              </div>`;
+            listEl.appendChild(li);
+          }
+        } catch (err) {
+          listEl.innerHTML = "";
+          showErr(err.message);
+        }
+      }
+
+      document.getElementById("refreshBtn").addEventListener("click", load);
+      load();
+    })();
+  </script>
+</body>
+</html>
