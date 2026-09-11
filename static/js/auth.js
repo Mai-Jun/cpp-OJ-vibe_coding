@@ -43,21 +43,56 @@ function renderNav() {
   inner += "</div>";
 
   if (isLoggedIn()) {
-    inner += `<div class="nav-user"><span class="uname">${esc(user)}</span>` +
-             (isAdmin ? '<span class="badge tag">管理员</span>' : "") +
-             `<button id="navLogout" class="btn-sm">登出</button></div>`;
+    const initial = esc(user.charAt(0));
+    inner += `<div class="nav-user-menu">` +
+      `<button id="navUserBtn" class="nav-user-btn" aria-haspopup="true" aria-expanded="false">` +
+      `<span class="avatar">${initial}</span>` +
+      `<span class="uname">${esc(user)}</span>` +
+      (isAdmin ? '<span class="badge tag">管理员</span>' : "") +
+      '<span class="caret">▼</span></button>' +
+      `<div class="user-dropdown" id="navUserMenu">` +
+      `<div class="dd-head"><div class="dd-name">${esc(user)}</div>` +
+      `<div class="dd-role">${isAdmin ? "管理员账号" : "普通用户"}</div></div>` +
+      '<a href="/profile.html">个人中心</a>' +
+      '<a href="/submissions.html">我的提交记录</a>' +
+      (isAdmin ? '<a href="/admin.html">管理后台</a>' : "") +
+      '<button id="navLogout" class="dd-logout">登出</button>' +
+      '</div></div>';
   } else {
     inner += '<div class="nav-user"><a class="btn-sm btn-outline" href="/login.html">登录</a>' +
              '<a class="btn-sm" href="/register.html">注册</a></div>';
   }
   nav.innerHTML = inner;
 
+  // 用户下拉菜单交互：点击切换、点击外部/Escape 关闭
+  const userBtn = document.getElementById("navUserBtn");
+  const userMenu = document.getElementById("navUserMenu");
+  if (userBtn && userMenu) {
+    userBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = userMenu.classList.toggle("open");
+      userBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.addEventListener("click", (e) => {
+      if (!userMenu.contains(e.target) && e.target !== userBtn) {
+        userMenu.classList.remove("open");
+        userBtn.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        userMenu.classList.remove("open");
+        userBtn.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
   const logoutBtn = document.getElementById("navLogout");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try { await apiFetch("/api/auth/logout", { method: "POST", body: {} }); } catch (e) {}
       clearSession();
-      location.href = "/login.html";
+      location.href = "/index.html";
     });
   }
 }

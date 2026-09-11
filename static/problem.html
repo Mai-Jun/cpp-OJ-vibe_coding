@@ -21,24 +21,30 @@
         <div class="meta" id="probMeta" style="margin:.4rem 0 0;"></div>
       </div>
 
-      <div class="split">
-        <div class="card prob-desc" id="probDesc">加载中...</div>
-        <div class="card editor-card">
-          <div class="editor-toolbar">
-            <span class="muted">main.cpp</span>
-            <div class="end">
-              <button type="button" class="btn-sm btn-secondary" id="resetBtn">重置模板</button>
-              <button type="button" class="btn-sm" id="submitBtn">提交评测</button>
+      <div class="split" id="split">
+        <div class="pane-desc">
+          <div class="card prob-desc" id="probDesc">加载中...</div>
+        </div>
+        <div class="split-gutter" id="splitGutter" role="separator" aria-orientation="vertical"
+             title="拖动调整两侧宽度"></div>
+        <div class="pane-editor">
+          <div class="card editor-card">
+            <div class="editor-toolbar">
+              <span class="muted">main.cpp</span>
+              <div class="end">
+                <button type="button" class="btn-sm btn-secondary" id="resetBtn">重置模板</button>
+                <button type="button" class="btn-sm" id="submitBtn">提交评测</button>
+              </div>
             </div>
+            <div id="editor"></div>
           </div>
-          <div id="editor"></div>
         </div>
       </div>
 
       <div class="card" id="resultCard" style="display:none;">
         <div class="result-head">
           <h2 style="margin:0;">评测结果</h2>
-          <span class="result-status" id="resultStatus">-</span>
+          <span class="result-status st-pending" id="resultStatus">评测中...</span>
         </div>
         <div class="result-detail" id="resultDetail"></div>
         <div class="result-meta" id="resultMeta"></div>
@@ -155,6 +161,7 @@ int main() {
           const sid = await submitSolution(problemId, code);
           submitBtn.textContent = "评测中...";
           resultCard.style.display = "";
+          renderResult({ status: "评测中...", detail: "已提交，正在排队评测...", cases: [] });
           resultCard.scrollIntoView({ behavior: "smooth" });
           const sub = await pollSubmission(sid);
           renderResult(sub);
@@ -175,7 +182,7 @@ int main() {
         const waBox = document.getElementById("waBox");
 
         statusEl.className = "result-status " + statusClass(sub.status);
-        statusEl.textContent = sub.status;
+        statusEl.textContent = sub.status || "评测中...";
         detailEl.textContent = sub.detail || (sub.status === "Accepted" ? "全部测试用例通过" : "");
 
         metaEl.textContent = "";
@@ -186,23 +193,37 @@ int main() {
         ceBox.style.display = sub.status === "Compile Error" ? "" : "none";
         document.getElementById("compileErr").textContent = sub.compile_error || "";
 
-        // 用例明细
+        // 用例明细：输入 / 预期输出 / 实际输出
         const cases = sub.cases || [];
         caseListEl.innerHTML = "";
         if (cases.length) {
-          const ul = document.createElement("ul");
-          ul.className = "case-result-list";
           for (const c of cases) {
-            const li = document.createElement("li");
-            li.innerHTML = `<span class="case-name">用例 #${c.order_no}</span>` +
+            const item = document.createElement("details");
+            item.className = "case-item";
+            const isWa = c.status === "WA";
+            if (isWa) item.open = true;
+            const summary = document.createElement("summary");
+            summary.innerHTML =
+              `<span class="case-name">用例 #${c.order_no}</span>` +
               `<span class="case-status ${statusClass(c.status)}">${esc(c.status)}</span>` +
-              `<span class="muted">${c.time_ms}ms</span>`;
-            ul.appendChild(li);
+              `<span class="muted">${c.time_ms}ms</span>` +
+              `<span class="muted case-hint">${isWa ? "▼ 对比输入 / 预期 / 实际" : "查看输入与输出"}</span>`;
+            const body = document.createElement("div");
+            body.className = "case-io";
+            body.innerHTML = `
+              <div class="case-io-row"><div class="muted">输入</div>
+                <pre class="md-code">${esc(c.input)}</pre></div>
+              <div class="case-io-row"><div class="muted">预期输出</div>
+                <pre class="md-code">${esc(c.expected_output)}</pre></div>
+              <div class="case-io-row"><div class="muted">实际输出</div>
+                <pre class="md-code">${esc(c.user_output)}</pre></div>`;
+            item.appendChild(summary);
+            item.appendChild(body);
+            caseListEl.appendChild(item);
           }
-          caseListEl.appendChild(ul);
         }
 
-        // WA 对比
+        // WA 对比（首个 WA 用例醒目展示）
         const waCase = cases.find(c => c.status === "WA");
         waBox.style.display = waCase ? "" : "none";
         if (waCase) {
@@ -215,6 +236,53 @@ int main() {
       document.getElementById("resetBtn").addEventListener("click", () => {
         editor.setValue(DEFAULT_TEMPLATE);
       });
+
+      // ---- 可拖拽分栏：拖动手柄调整 描述/编辑器 宽度比例（持久化到 localStorage） ----
+      (function initSplit() {
+        const split = document.getElementById("split");
+        const desc = split.querySelector(".pane-desc");
+        const gutter = document.getElementById("splitGutter");
+        const KEY = "oj_split_ratio";
+
+        // 恢复上次的分栏比例
+        const saved = parseFloat(localStorage.getItem(KEY));
+        if (!isNaN(saved) && saved >= 25 && saved <= 75) {
+          desc.style.flexBasis = saved + "%";
+        }
+
+        let dragging = false;
+        gutter.addEventListener("pointerdown", (e) => {
+          dragging = true;
+          gutter.classList.add("dragging");
+          gutter.setPointerCapture(e.pointerId);
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+          e.preventDefault();
+        });
+        gutter.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          const rect = split.getBoundingClientRect();
+          // 以分栏容器（而非窗口）计算百分比，双卡与手柄本身宽度已含在 rect 内
+          const pct = ((e.clientX - rect.left) / rect.width) * 100;
+          const clamped = Math.min(75, Math.max(25, pct));
+          desc.style.flexBasis = clamped + "%";
+        });
+        const stopDrag = (e) => {
+          if (!dragging) return;
+          dragging = false;
+          gutter.classList.remove("dragging");
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+          if (e && e.pointerId !== undefined) {
+            try { gutter.releasePointerCapture(e.pointerId); } catch (_) {}
+          }
+          const rect = split.getBoundingClientRect();
+          const pct = ((e ? e.clientX : rect.left) - rect.left) / rect.width * 100;
+          localStorage.setItem(KEY, String(Math.min(75, Math.max(25, pct))));
+        };
+        gutter.addEventListener("pointerup", stopDrag);
+        gutter.addEventListener("pointercancel", stopDrag);
+      })();
 
       loadProblem();
     })();

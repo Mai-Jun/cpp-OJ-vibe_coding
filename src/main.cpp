@@ -12,6 +12,7 @@
 #include "judge_service.h"
 #include "problem_routes.h"
 #include "submission_routes.h"
+#include "user_routes.h"
 
 #include <sys/stat.h>
 
@@ -93,6 +94,7 @@ int main(int argc, char **argv) {
   // 评测服务：后台单 worker 串行评测（其内部使用独立 DB 连接）。
   oj::judge::JudgeService judge(&db);
   oj::RegisterSubmissionRoutes(svr, &db, &judge);
+  oj::RegisterUserRoutes(svr, &db, &judge);
 
   // 健康检查
   svr.Get("/health", [](const httplib::Request &, httplib::Response &res) {

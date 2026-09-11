@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人中心 - OnlineJudge</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="wide">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="container wide">
+    <div class="alert" id="alert"></div>
+
+    <!-- 用户信息头 -->
+    <div class="card profile-head">
+      <div class="profile-identity">
+        <span class="profile-avatar" id="pfAvatar">?</span>
+        <div>
+          <h2 style="margin:0;" id="pfName">加载中...</h2>
+          <div class="muted" id="pfRole"></div>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <a class="btn-sm btn-secondary" href="/problems.html">继续刷题</a>
+        <a class="btn-sm btn-secondary" href="/submissions.html">提交记录</a>
+      </div>
+    </div>
+
+    <!-- 统计卡片行 -->
+    <div class="stat-grid">
+      <div class="card stat-card">
+        <div class="stat-value accent" id="statSolved">-</div>
+        <div class="stat-label">已完成题目</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="statTotal">-</div>
+        <div class="stat-label">总提交次数</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="statAccepted">-</div>
+        <div class="stat-label">AC 提交次数</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-value" id="statRate">-</div>
+        <div class="stat-label">通过率 (AC / 总提交)</div>
+      </div>
+    </div>
+
+    <!-- 题库完成进度 -->
+    <div class="card">
+      <div class="progress-head">
+        <h3 style="margin:0;">题库完成进度</h3>
+        <span class="muted" id="progressText">-/-</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" id="progressBar" style="width:0%;"></div>
+      </div>
+    </div>
+
+    <!-- 已解决题目列表 -->
+    <div class="card">
+      <h3 style="margin-top:0;">已解决的题目</h3>
+      <ul class="problem-list" id="solvedList">
+        <li class="muted-row">加载中...</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    (function () {
+      if (!requireLogin()) return;
+
+      const alertEl = document.getElementById("alert");
+
+      function showErr(msg) {
+        alertEl.className = "alert error";
+        alertEl.textContent = msg;
+      }
+
+      // 加载题库列表（用于把已解决题目 id 映射为标题/难度）
+      async function loadProblemIndex() {
+        try {
+          const data = await apiFetch("/api/problems");
+          const map = {};
+          for (const p of data.problems || []) map[p.id] = p;
+          return map;
+        } catch (err) {
+          return {};
+        }
+      }
+
+      async function load() {
+        const probIndex = await loadProblemIndex();
+        try {
+          const data = await apiFetch("/api/users/me/stats");
+          const st = data.stats;
+
+          // 头部信息
+          document.getElementById("pfName").textContent = st.username;
+          document.getElementById("pfRole").textContent = st.role === "admin" ? "管理员账号" : "普通用户";
+          document.getElementById("pfAvatar").textContent = (st.username || "?").charAt(0);
+
+          // 统计数字
+          document.getElementById("statSolved").textContent = st.solved;
+          document.getElementById("statTotal").textContent = st.total_submissions;
+          document.getElementById("statAccepted").textContent = st.accepted_submissions;
+          document.getElementById("statRate").textContent = st.ac_rate.toFixed(1) + "%";
+
+          // 进度条
+          const total = st.total_problems || 0;
+          const solved = st.solved || 0;
+          const pct = total > 0 ? Math.min(100, (solved / total) * 100) : 0;
+          document.getElementById("progressBar").style.width = pct.toFixed(1) + "%";
+          document.getElementById("progressText").textContent = `${solved} / ${total} 题（${pct.toFixed(1)}%）`;
+
+          // 已解决题目列表
+          const listEl = document.getElementById("solvedList");
+          const ids = st.solved_problem_ids || [];
+          if (!ids.length) {
+            listEl.innerHTML = '<li class="muted-row">还没有通过的题目，去 <a href="/problems.html">题库</a> 开始第一题吧！</li>';
+            return;
+          }
+          ids.sort((a, b) => a - b);
+          listEl.innerHTML = "";
+          for (const id of ids) {
+            const p = probIndex[id];
+            const li = document.createElement("li");
+            const diffBadge = p
+              ? `<span class="${DIFF_CLASS[p.difficulty] || 'badge'}">${esc(p.difficulty)}</span>`
+              : "";
+            const title = p ? `<a class="prob-title" href="/problem.html?id=${p.id}">${esc(p.title)}</a>`
+                            : `<a class="prob-title" href="/problem.html?id=${id}">题目 #${id}</a>`;
+            li.innerHTML = `<div class="prob-row"><div>${title}</div>
+              <div class="meta">${diffBadge}<span class="badge tag">已通过</span></div></div>
+              <span class="goto">›</span>`;
+            listEl.appendChild(li);
+          }
+        } catch (err) {
+          showErr(err.message);
+        }
+      }
+
+      load();
+    })();
+  </script>
+</body>
+</html>

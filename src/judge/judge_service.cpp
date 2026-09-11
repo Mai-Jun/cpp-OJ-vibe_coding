@@ -13,9 +13,11 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <set>
 #include <sstream>
 
 #include "comparator.h"
@@ -31,8 +33,28 @@ constexpr long kMaxOutputBytes = 1024 * 1024;  // 用户程序输出捕获上限
 constexpr long kDisplayTrunc = 4096;           // 单条输出存入结果的截断长度
 constexpr long kCompileErrTrunc = 8192;        // 编译错误截断长度
 constexpr int kCompileTimeoutSec = 10;
-constexpr const char *kBaseWorkDir = "/tmp/oj_judge";
 constexpr const char *kRunnerUser = "oj-runner";  // DEPENDENCIES.md 建议的低权限评测用户
+
+// 评测工作基目录：优先环境变量 OJ_WORK_DIR；缺省 /var/oj/judge（长期目录，
+// 不像 /tmp 会被系统清理或重启丢失）；不可用时回退到当前目录下 oj_judge。
+std::string BaseWorkDir() {
+  if (const char *env = std::getenv("OJ_WORK_DIR")) {
+    if (env[0] != '\0') return env;
+  }
+  constexpr const char *kDefaultWorkDir = "/var/oj/judge";
+  constexpr const char *kFallbackWorkDir = "oj_judge";  // 相对 cwd（非 root 无权限时）
+  std::string dir = kDefaultWorkDir;
+  for (int i = 0; i < 2; ++i) {
+    struct stat st {};
+    if (stat(dir.c_str(), &st) == 0) {
+      if (S_ISDIR(st.st_mode) && access(dir.c_str(), W_OK) == 0) return dir;
+    } else if (mkdir(dir.c_str(), 0755) == 0) {
+      return dir;
+    }
+    dir = kFallbackWorkDir;
+  }
+  return dir;
+}
 
 std::string Truncate(const std::string &s, long limit) {
   if (static_cast<long>(s.size()) <= limit) return s;
@@ -144,7 +166,7 @@ void RemoveDir(const std::string &path) {
 }
 
 // 启动时清理评测工作目录（Phase 5）：删除上次异常退出残留的临时目录。
-// 仅处理 /tmp/oj_judge 下以 "oj_" 前缀命名的目录，不递归清空基目录。
+// 仅处理工作基目录下以 "oj_" 前缀命名的目录，不递归清空基目录。
 void CleanupStaleDirs(const std::string &base) {
   DIR *d = opendir(base.c_str());
   if (!d) return;
@@ -162,16 +184,18 @@ void CleanupStaleDirs(const std::string &base) {
 
 // 确保评测工作基目录存在并清理残留（Phase 5）。
 void PrepareWorkDir() {
+  const std::string base = BaseWorkDir();
   struct stat st {};
-  if (stat(kBaseWorkDir, &st) == 0) {
+  if (stat(base.c_str(), &st) == 0) {
     if (!S_ISDIR(st.st_mode)) {
-      std::fprintf(stderr, "[judge] %s 存在但不是目录，评测工作目录不可用\n", kBaseWorkDir);
+      std::fprintf(stderr, "[judge] %s 存在但不是目录，评测工作目录不可用\n", base.c_str());
       return;
     }
   } else {
-    mkdir(kBaseWorkDir, 0755);
+    mkdir(base.c_str(), 0755);
   }
-  CleanupStaleDirs(kBaseWorkDir);
+  std::fprintf(stderr, "[judge] 评测工作目录: %s\n", base.c_str());
+  CleanupStaleDirs(base);
 }
 
 // 加载题目信息（title/限额/判题方式/spj 源码）。失败返回 false。
@@ -236,17 +260,27 @@ JudgeService::~JudgeService() {
 
 long long JudgeService::Submit(long long user_id, long long problem_id, const std::string &code) {
   if (code.empty() || code.size() > 512 * 1024) return 0;  // 内容/大小限制
-  {
-    std::lock_guard<std::mutex> lk(mu_);
-    Task t;
-    t.id = next_id_++;
-    t.user_id = user_id;
-    t.problem_id = problem_id;
-    t.code = code;
-    queue_.push_back(std::move(t));
-    cv_.notify_one();
-    return t.id;
-  }
+  std::lock_guard<std::mutex> lk(mu_);
+  Task t;
+  t.id = next_id_++;
+  t.user_id = user_id;
+  t.problem_id = problem_id;
+  t.code = code;
+  queue_.push_back(t);
+  // 立即创建占位结果：轮询接口从提交那一刻起就能查到该提交（done=false），
+  // 避免「提交不存在」404 误报；worker 完成后覆盖为最终结果。
+  auto res = std::make_shared<SubmissionResult>();
+  res->id = t.id;
+  res->user_id = user_id;
+  res->problem_id = problem_id;
+  res->code = code;
+  res->status = "";
+  res->detail = "";
+  res->created_at = NowStr();
+  res->done = false;
+  results_[t.id] = std::move(res);
+  cv_.notify_one();
+  return t.id;
 }
 
 std::shared_ptr<const SubmissionResult> JudgeService::Get(long long id) const {
@@ -266,6 +300,23 @@ std::vector<std::shared_ptr<const SubmissionResult>> JudgeService::ListByUser(
   return out;
 }
 
+UserStats JudgeService::GetUserStats(long long user_id) const {
+  UserStats st;
+  std::set<long long> solved;
+  std::lock_guard<std::mutex> lk(mu_);
+  for (const auto &kv : results_) {
+    const auto &s = kv.second;
+    if (s->user_id != user_id || !s->done) continue;
+    st.total++;
+    if (s->status == "AC") {
+      st.accepted++;
+      solved.insert(s->problem_id);
+    }
+  }
+  st.solved_problem_ids.assign(solved.begin(), solved.end());
+  return st;
+}
+
 void JudgeService::WorkerLoop() {
   // 评测 worker 使用独立 DB 连接，避免与 HTTP 线程共享句柄产生竞态。
   MYSQL db;
@@ -274,6 +325,7 @@ void JudgeService::WorkerLoop() {
     DbConfig cfg = DbConfigFromEnv();
     if (DbConnect(&db, cfg)) db_ok = true;
   }
+  work_dir_ = BaseWorkDir();
   PrepareWorkDir();
 
   for (;;) {
@@ -308,6 +360,7 @@ void JudgeService::RunTask(const Task &task, MYSQL *db) {
   res->id = task.id;
   res->user_id = task.user_id;
   res->problem_id = task.problem_id;
+  res->code = task.code;
   res->status = "SE";
   res->created_at = NowStr();
   res->done = true;
@@ -316,7 +369,7 @@ void JudgeService::RunTask(const Task &task, MYSQL *db) {
   // chmod 0755 是 root 启动 + 降权 oj-runner 运行所需的：子进程降权后仍需
   // 读入 main.cpp / 写出输出到该目录。目录本身无敏感数据（评测用例由 worker
   // 写入，属公开题目内容），受 seccomp + rlimit 约束的用户代码读不到系统文件。
-  std::string work = std::string(kBaseWorkDir) + "/oj_" + std::to_string(task.id);
+  std::string work = work_dir_ + "/oj_" + std::to_string(task.id);
   mkdir(work.c_str(), 0700);
   chmod(work.c_str(), 0755);
 
@@ -386,6 +439,7 @@ void JudgeService::RunTask(const Task &task, MYSQL *db) {
     CaseResult cr;
     cr.order_no = c.order_no;
     cr.time_ms = std::max<long long>(r.cpu_ms, 0);
+    cr.input = Truncate(c.input, kDisplayTrunc);
     cr.user_output = Truncate(r.output, kDisplayTrunc);
     cr.expected_output = Truncate(c.expected, kDisplayTrunc);
     max_time = std::max(max_time, cr.time_ms);

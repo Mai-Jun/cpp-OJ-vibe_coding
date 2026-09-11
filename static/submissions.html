@@ -23,6 +23,44 @@
     </div>
   </div>
 
+  <!-- 提交详情模态框 -->
+  <div class="modal-mask" id="detailMask" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h2 style="margin:0;">提交详情 <span class="muted" id="dSubId"></span></h2>
+        <button class="btn-sm btn-secondary" id="dCloseBtn">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-meta" id="dMeta"></div>
+
+        <div class="result-subtitle">提交代码</div>
+        <pre class="md-code code-block" id="dCode"></pre>
+
+        <div id="dCompileErrBox" style="display:none;">
+          <div class="result-subtitle">编译输出</div>
+          <pre class="md-code" id="dCompileErr"></pre>
+        </div>
+
+        <div class="result-subtitle">评测结果</div>
+        <div id="dCases"></div>
+
+        <div id="dWaBox" style="display:none;">
+          <div class="result-subtitle">预期输出 vs 实际输出</div>
+          <div class="grid-2">
+            <div>
+              <div class="muted">期望输出</div>
+              <pre class="md-code" id="dWaExpected"></pre>
+            </div>
+            <div>
+              <div class="muted">实际输出</div>
+              <pre class="md-code" id="dWaActual"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script>
@@ -31,10 +69,84 @@
 
       const listEl = document.getElementById("subList");
       const alertEl = document.getElementById("alert");
+      const detailMask = document.getElementById("detailMask");
 
       function showErr(msg) {
         alertEl.className = "alert error";
         alertEl.textContent = msg;
+      }
+
+      function closeDetail() { detailMask.style.display = "none"; }
+      document.getElementById("dCloseBtn").addEventListener("click", closeDetail);
+      detailMask.addEventListener("click", (e) => { if (e.target === detailMask) closeDetail(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDetail(); });
+
+      // 详情弹窗：代码 + 评测结果（输入/预期/实际）。
+      function renderDetail(sub) {
+        document.getElementById("dSubId").textContent = `#${sub.id}`;
+        document.getElementById("dMeta").innerHTML =
+          `<a href="/problem.html?id=${sub.problem_id}" class="prob-title">${esc(sub.problem_title)}</a>` +
+          `<span class="case-status ${statusClass(sub.status)}">${esc(sub.status || "评测中...")}</span>` +
+          `<span class="muted">${timeAgo(sub.created_at)}</span>` +
+          (sub.time_ms > 0 ? `<span class="muted">${sub.time_ms}ms</span>` : "") +
+          (sub.memory_mb > 0 ? `<span class="muted">${sub.memory_mb}MB</span>` : "");
+
+        document.getElementById("dCode").textContent = sub.code || "（代码未保存）";
+
+        const ceBox = document.getElementById("dCompileErrBox");
+        ceBox.style.display = sub.status === "Compile Error" ? "" : "none";
+        document.getElementById("dCompileErr").textContent = sub.compile_error || "";
+
+        const casesEl = document.getElementById("dCases");
+        casesEl.innerHTML = "";
+        const cases = sub.cases || [];
+        if (!cases.length) {
+          casesEl.innerHTML = sub.done
+            ? '<div class="muted">无用例明细</div>'
+            : '<div class="muted">评测中，请稍后重新打开详情...</div>';
+        }
+        for (const c of cases) {
+          const item = document.createElement("details");
+          item.className = "case-item";
+          if (c.status === "WA") item.open = true;
+          const summary = document.createElement("summary");
+          summary.innerHTML =
+            `<span class="case-name">用例 #${c.order_no}</span>` +
+            `<span class="case-status ${statusClass(c.status)}">${esc(c.status)}</span>` +
+            `<span class="muted">${c.time_ms}ms</span>` +
+            `<span class="muted case-hint">${c.status === "WA" ? "▼ 对比输入 / 预期 / 实际" : "查看输入与输出"}</span>`;
+          const body = document.createElement("div");
+          body.className = "case-io";
+          body.innerHTML = `
+            <div class="case-io-row"><div class="muted">输入</div>
+              <pre class="md-code">${esc(c.input)}</pre></div>
+            <div class="case-io-row"><div class="muted">预期输出</div>
+              <pre class="md-code">${esc(c.expected_output)}</pre></div>
+            <div class="case-io-row"><div class="muted">实际输出</div>
+              <pre class="md-code">${esc(c.user_output)}</pre></div>`;
+          item.appendChild(summary);
+          item.appendChild(body);
+          casesEl.appendChild(item);
+        }
+
+        const waCase = cases.find(c => c.status === "WA");
+        document.getElementById("dWaBox").style.display = waCase ? "" : "none";
+        if (waCase) {
+          document.getElementById("dWaExpected").textContent = waCase.expected_output;
+          document.getElementById("dWaActual").textContent = waCase.user_output;
+        }
+
+        detailMask.style.display = "";
+      }
+
+      async function openDetail(id) {
+        try {
+          const data = await apiFetch(`/api/submissions/${id}`);
+          if (!data.ok || !data.submission) throw new Error(data.error || "查询失败");
+          renderDetail(data.submission);
+        } catch (err) {
+          showErr(err.message);
+        }
       }
 
       async function load() {
@@ -52,17 +164,22 @@
               <div class="sub-row">
                 <a class="prob-title" href="/problem.html?id=${s.problem_id}">${esc(s.problem_title)}</a>
                 <div class="meta">
-                  <span class="${statusClass(s.status)}">${esc(s.status)}</span>
+                  <span class="${statusClass(s.status)}">${esc(s.status || "评测中...")}</span>
                   <span class="muted">${timeAgo(s.created_at)}</span>
                 </div>
               </div>
-              <div class="sub-extra muted">
-                <span>#${s.id}</span>
-                ${s.time_ms > 0 ? `<span>${s.time_ms}ms</span>` : ""}
-                ${s.memory_mb > 0 ? `<span>${s.memory_mb}MB</span>` : ""}
+              <div class="sub-end">
+                <div class="sub-extra muted">
+                  <span>#${s.id}</span>
+                  ${s.time_ms > 0 ? `<span>${s.time_ms}ms</span>` : ""}
+                  ${s.memory_mb > 0 ? `<span>${s.memory_mb}MB</span>` : ""}
+                </div>
+                <button class="btn-sm btn-secondary" data-detail="${s.id}">详情</button>
               </div>`;
             listEl.appendChild(li);
           }
+          listEl.querySelectorAll("[data-detail]").forEach(b =>
+            b.addEventListener("click", () => openDetail(+b.dataset.detail)));
         } catch (err) {
           listEl.innerHTML = "";
           showErr(err.message);

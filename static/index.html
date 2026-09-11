@@ -6,32 +6,106 @@
   <title>OnlineJudge - 在线判题系统</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-  <div class="container">
-    <h1>Online Judge</h1>
-    <div class="auth-card">
-      <p id="welcome">欢迎使用在线判题系统。</p>
-      <div id="guestBox">
-        <p class="meta"><a href="/login.html">去登录</a></p>
-        <p class="meta">还没有账号？<a href="/register.html">立即注册</a></p>
+<body class="wide landing">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="container wide landing-wrap">
+    <!-- Hero：平台介绍 + 登录/注册入口 -->
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="hero-kicker">C++ Online Judge</span>
+        <h1>在浏览器中编写、提交、<span class="accent-text">即刻判题</span></h1>
+        <p class="hero-sub">
+          面向算法练习与教学的在线评测平台：内置沙箱安全评测、
+          逐毫秒/逐字节精准判定、特判（Special Judge）支持，
+          提交后实时反馈每个测试用例的输入与输出对比。
+        </p>
+        <div class="hero-cta" id="heroCta">
+          <a class="btn-hero" href="/login.html">立即登录</a>
+          <a class="btn-hero btn-hero-outline" href="/register.html">免费注册</a>
+        </div>
+        <div class="hero-points">
+          <span>✔ 沙箱隔离评测</span>
+          <span>✔ 7 类结果精准判定</span>
+          <span>✔ 用例级 WA 对比</span>
+        </div>
       </div>
-      <div id="userBox" style="display:none;">
-        <p class="meta"><a href="/problems.html">进入题库</a></p>
-        <p class="meta"><a href="/submissions.html">我的提交记录</a></p>
-        <p class="meta" id="adminLink" style="display:none;"><a href="/admin.html">管理后台</a></p>
+
+      <!-- 代码演示卡片（纯视觉） -->
+      <div class="hero-demo md-code" aria-hidden="true"><span class="tok-pre">#include</span> <span class="tok-type">&lt;iostream&gt;</span>
+<span class="tok-kw">using namespace</span> std;
+
+<span class="tok-kw">int</span> <span class="tok-fn">main</span>() {
+  <span class="tok-pre">// 两数之和</span>
+  <span class="tok-kw">int</span> a, b;
+  cin &gt;&gt; a &gt;&gt; b;
+  cout &lt;&lt; a + b &lt;&lt; endl;
+  <span class="tok-kw">return</span> <span class="tok-num">0</span>;
+}
+<span class="tok-comment">// ✓ Accepted · 3ms · 2.1MB</span></div>
+    </section>
+
+    <!-- 特色功能 -->
+    <section class="landing-section">
+      <h2>平台特色</h2>
+      <div class="feature-grid">
+        <div class="card feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>实时评测</h3>
+          <p>提交后异步排队评测，轮询即时返回结果，用例级耗时与内存一目了然。</p>
+        </div>
+        <div class="card feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>安全沙箱</h3>
+          <p>用户代码在低权限沙箱中运行，seccomp 系统调用过滤 + 资源限额双重防护。</p>
+        </div>
+        <div class="card feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>精准判定</h3>
+          <p>支持逐字节对比与特判（SPJ）两种模式，WA 时直接展示预期/实际输出对比。</p>
+        </div>
+        <div class="card feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>个人成长追踪</h3>
+          <p>题库完成进度、通过率、AC 统计实时更新，见证每一行代码的进步。</p>
+        </div>
       </div>
-    </div>
+    </section>
+
+    <!-- 三步上手 -->
+    <section class="landing-section">
+      <h2>三步开始你的第一题</h2>
+      <div class="steps">
+        <div class="step"><span class="step-no">1</span><h3>注册账号</h3><p>30 秒完成注册，无需邮箱验证。</p></div>
+        <div class="step"><span class="step-no">2</span><h3>选择题目</h3><p>浏览题库，按难度与标签筛选感兴趣的题目。</p></div>
+        <div class="step"><span class="step-no">3</span><h3>编写提交</h3><p>在浏览器编辑器中编写 C++，一键提交即时评测。</p></div>
+      </div>
+    </section>
+
+    <!-- 底部 CTA -->
+    <section class="landing-cta card">
+      <h2 style="margin-top:0;">准备好了吗？</h2>
+      <p class="muted">登录后即可访问完整题库，开始你的算法之旅。</p>
+      <div class="hero-cta center" id="footCta">
+        <a class="btn-hero" href="/login.html">登录</a>
+        <a class="btn-hero btn-hero-outline" href="/register.html">注册</a>
+      </div>
+    </section>
+
+    <footer class="landing-footer muted">OnlineJudge · C++ 在线评测系统</footer>
   </div>
 
   <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
   <script>
     (function () {
-      const s = getSession();
-      if (s && s.username) {
-        document.getElementById("welcome").textContent = `欢迎回来，${s.username}`;
-        document.getElementById("guestBox").style.display = "none";
-        document.getElementById("userBox").style.display = "";
-        if (s.role === "admin") document.getElementById("adminLink").style.display = "";
+      // 已登录用户：CTA 变为「进入题库」，导航由 auth.js 渲染
+      if (isLoggedIn()) {
+        const cta =
+          '<a class="btn-hero" href="/problems.html">进入题库</a>' +
+          '<a class="btn-hero btn-hero-outline" href="/profile.html">个人中心</a>';
+        document.getElementById("heroCta").innerHTML = cta;
+        document.getElementById("footCta").innerHTML = cta;
       }
     })();
   </script>

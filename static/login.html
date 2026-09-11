@@ -61,7 +61,7 @@
         const data = await apiFetch(path, { method: "POST", body: { username, password } });
         if (!data.ok) throw new Error(data.error || "登录失败");
         setSession({ username: data.username, role: data.role });
-        location.href = "/";
+        location.href = "/problems.html";
       } catch (err) {
         alertEl.className = "alert error";
         alertEl.textContent = err.message;

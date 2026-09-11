@@ -26,6 +26,7 @@ struct CaseResult {
   std::string status;         // AC / WA / TLE / MLE / RE / SE
   std::string detail;         // 说明（RTE 信号、MLE 线索等）
   long long time_ms = 0;
+  std::string input;          // 用例输入（供前端展示）
   std::string user_output;    // 用户实际输出（WA 时展示）
   std::string expected_output;// 期望输出（WA 时展示）
 };
@@ -41,9 +42,17 @@ struct SubmissionResult {
   long long time_ms = 0;      // 总耗时（取最坏用例）
   long long memory_mb = 0;    // 峰值内存（取最坏用例）
   std::string compile_error;  // CE 时的编译器输出
+  std::string code;           // 用户提交的代码（详情页展示）
   std::vector<CaseResult> cases;
   std::string created_at;
   bool done = true;           // 评测是否完成
+};
+
+// 用户做题统计（供个人中心展示，内存态聚合）。
+struct UserStats {
+  long long total = 0;                        // 已完成的总提交次数
+  long long accepted = 0;                     // AC 提交次数
+  std::vector<long long> solved_problem_ids;  // 去重后的已解决题目 id
 };
 
 // 评测服务：持有后台 worker 线程，串行执行内存队列中的评测任务。
@@ -65,6 +74,9 @@ class JudgeService {
   std::vector<std::shared_ptr<const SubmissionResult>> ListByUser(long long user_id,
                                                                   int limit) const;
 
+  // 该用户的做题统计：总提交数 / AC 数 / 已解决题目集合（仅统计已完成提交）。
+  UserStats GetUserStats(long long user_id) const;
+
  private:
   struct Task {
     long long id = 0;
@@ -84,6 +96,7 @@ class JudgeService {
   std::condition_variable cv_;
   bool stop_ = false;
   long long next_id_ = 1;
+  std::string work_dir_;  // 评测工作基目录（OJ_WORK_DIR 或长期缺省目录）
   std::deque<Task> queue_;
   std::map<long long, std::shared_ptr<SubmissionResult>> results_;
 };

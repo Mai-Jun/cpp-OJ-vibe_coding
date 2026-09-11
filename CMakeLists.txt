@@ -15,6 +15,7 @@ add_executable(oj_server
   src/routes/auth_routes.cpp
   src/routes/problem_routes.cpp
   src/routes/submission_routes.cpp
+  src/routes/user_routes.cpp
   src/judge/sandbox.cpp
   src/judge/comparator.cpp
   src/judge/judge_service.cpp

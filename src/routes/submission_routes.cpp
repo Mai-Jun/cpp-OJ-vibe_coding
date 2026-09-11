@@ -43,6 +43,7 @@ json::Value CaseToJson(const judge::CaseResult &c) {
   o["status"] = json::Value(c.status);
   o["detail"] = json::Value(c.detail);
   o["time_ms"] = json::Value(c.time_ms);
+  o["input"] = json::Value(c.input);
   o["user_output"] = json::Value(c.user_output);
   o["expected_output"] = json::Value(c.expected_output);
   return json::Value(std::move(o));
@@ -60,6 +61,7 @@ json::Value ResultToJson(const judge::SubmissionResult &s) {
   o["time_ms"] = json::Value(s.time_ms);
   o["memory_mb"] = json::Value(s.memory_mb);
   o["compile_error"] = json::Value(s.compile_error);
+  o["code"] = json::Value(s.code);
   o["created_at"] = json::Value(s.created_at);
   o["done"] = json::Value(s.done);
   std::vector<json::Value> cases;
